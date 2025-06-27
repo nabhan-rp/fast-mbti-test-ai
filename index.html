@@ -1,0 +1,332 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MBTI Personality Insights AI</title>
+  <!-- Tailwind CSS CDN should be loaded first -->
+  <script src="https://cdn.tailwindcss.com?plugins=typography,forms"></script> 
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: 'rgb(var(--color-primary) / <alpha-value>)', 
+            secondary: 'rgb(var(--color-secondary) / <alpha-value>)', 
+            accent: 'rgb(var(--color-accent) / <alpha-value>)', 
+            neutral: 'rgb(var(--color-neutral) / <alpha-value>)',
+            bground: 'rgb(var(--color-bground) / <alpha-value>)',
+            'bground-light': 'rgb(var(--color-bground-light) / <alpha-value>)',
+            content: 'rgb(var(--color-content) / <alpha-value>)',
+            'content-muted': 'rgb(var(--color-content-muted) / <alpha-value>)',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Playfair Display', 'serif'],
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.5s ease-out',
+            'slide-up': 'slideUp 0.5s ease-out',
+            'pulse- थोड़ा': 'pulseMore 2s cubic-bezier(0.4, 0, 0.6, 1) infinite', // Using 'थोड़ा' as a unique name part
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideUp: {
+              '0%': { transform: 'translateY(20px)', opacity: '0'},
+              '100%': { transform: 'translateY(0)', opacity: '1'},
+            },
+            pulseMore: { // Keyframes for a more pronounced pulse
+              '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+              '50%': { opacity: '.7', transform: 'scale(1.05)' },
+            }
+          },
+          textShadow: {
+            DEFAULT: '0 2px 4px rgba(0,0,0,0.10)',
+            sm: '0 1px 2px rgba(0,0,0,0.05)',
+            md: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+            lg: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+            'accent-glow': '0 0 8px rgb(var(--color-accent)), 0 0 12px rgb(var(--color-accent) / 0.7)',
+            'primary-glow': '0 0 8px rgb(var(--color-primary)), 0 0 12px rgb(var(--color-primary) / 0.7)',
+          },
+          typography: (theme) => ({
+            DEFAULT: {
+              css: {
+                color: theme('colors.content-muted'),
+                a: {
+                  color: theme('colors.primary'),
+                  '&:hover': {
+                    color: theme('colors.accent'),
+                  },
+                },
+                h1: { color: theme('colors.content'), fontFamily: theme('fontFamily.display') },
+                h2: { color: theme('colors.content'), fontFamily: theme('fontFamily.display') },
+                h3: { color: theme('colors.content'), fontFamily: theme('fontFamily.display') },
+                h4: { color: theme('colors.content'), fontFamily: theme('fontFamily.display') },
+                strong: { color: theme('colors.content')},
+                ul: {
+                    listStyleType: 'disc',
+                    paddingLeft: theme('spacing.5'),
+                },
+                ol: {
+                    listStyleType: 'decimal',
+                    paddingLeft: theme('spacing.5'),
+                },
+                li: {
+                    marginTop: theme('spacing.1'),
+                    marginBottom: theme('spacing.1'),
+                },
+                'li::marker': {
+                  color: theme('colors.primary'),
+                },
+                code: {
+                  color: theme('colors.accent'),
+                  backgroundColor: theme('colors.bground-light'),
+                  padding: '0.2em 0.4em',
+                  borderRadius: '0.25rem',
+                },
+                pre: {
+                  backgroundColor: theme('colors.bground-light'),
+                  color: theme('colors.content-muted'),
+                  padding: theme('spacing.4'),
+                  borderRadius: theme('spacing.md'),
+                  overflowX: 'auto',
+                },
+              },
+            },
+          }),
+        }
+      },
+      // The plugins array is removed from here as it's handled by CDN URL
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-primary: 219 39 119; /* pink-600 (Vibrant Pink) */
+      --color-secondary: 37 99 235; /* blue-600 (Bright Blue) */
+      --color-accent: 250 204 21; /* yellow-400 (Golden/Neon Yellow, brighter than yellow-300 for more pop) */
+      --color-neutral: 107 114 128; /* gray-500 */
+      --color-bground: 17 24 39; /* gray-900 (dark mode base) */
+      --color-bground-light: 31 41 55; /* gray-800 */
+      --color-content: 229 231 235; /* gray-200 */
+      --color-content-muted: 156 163 175; /* gray-400 */
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: rgb(var(--color-bground));
+      color: rgb(var(--color-content));
+    }
+    .glassmorphism {
+      background: rgba(var(--color-bground-light), 0.65); 
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(var(--color-neutral), 0.15); 
+    }
+    h1, h2, h3, h4 {
+        font-family: 'Playfair Display', serif;
+        color: rgb(var(--color-content));
+    }
+    .prose h1, .prose h2, .prose h3, .prose h4, .prose strong {
+        color: rgb(var(--color-content));
+        font-family: 'Playfair Display', serif; 
+    }
+    .prose p, .prose li, .prose blockquote, .prose td, .prose th {
+        color: rgb(var(--color-content-muted));
+    }
+     .prose a {
+        color: rgb(var(--color-primary)); 
+    }
+    .prose a:hover {
+        color: rgb(var(--color-accent)); 
+    }
+    .btn-primary {
+        @apply bg-primary hover:bg-pink-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg;
+    }
+    .btn-secondary {
+        @apply bg-secondary hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg;
+    }
+    .btn-accent {
+         @apply bg-accent hover:bg-yellow-500 text-bground font-semibold py-2 px-4 rounded-lg transition-all duration-300 shadow-md hover:shadow-lg;
+    }
+
+    /* Styling for select dropdown options in dark mode */
+    select.dark-theme-options {
+        color-scheme: dark; /* Hint for browser to use dark themed dropdown list if supported */
+    }
+    select.dark-theme-options option {
+      background-color: rgb(var(--color-bground)); /* Dark background for options */
+      color: rgb(var(--color-content)); /* Light text for options */
+    }
+    /* Custom scrollbar for better dark theme integration */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgb(var(--color-bground-light) / 0.5);
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgb(var(--color-neutral) / 0.7);
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgb(var(--color-primary) / 0.7);
+    }
+
+    /* Rule to hide print-only elements on screen by default */
+    .print-only {
+      display: none;
+    }
+
+    /* Print specific styles */
+    @media print {
+      body {
+        background-color: white !important;
+        color: black !important;
+        -webkit-print-color-adjust: exact; /* Chrome, Safari, Edge */
+        color-adjust: exact; /* Firefox */
+      }
+      
+      .no-print {
+        display: none !important;
+      }
+
+      .print-only {
+        display: block !important; /* Makes it visible for print, overriding the screen style */
+        visibility: visible !important;
+        margin-top: 1.5rem;
+        padding: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 0.5rem;
+        background-color: #f9f9f9 !important; /* Light background for print-only sections */
+      }
+      .print-only h2, .print-only h3 {
+        color: black !important;
+        font-family: 'Playfair Display', serif;
+      }
+      .print-only .prose p, .print-only .prose li, .print-only .prose div {
+        color: #333 !important;
+      }
+       .print-only .prose strong {
+        color: black !important;
+      }
+
+      /* Styles for printing the main content area (ResultsPage, DashboardPage) */
+      body.print-active-page > header.no-print, 
+      body.print-active-page > nav.no-print, 
+      body.print-active-page > footer.no-print,
+      body.print-active-page .action-buttons-container.no-print { /* Container for action buttons */
+        display: none !important;
+      }
+
+      body.print-active-page .printable-content-area {
+        visibility: visible !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 1rem !important; /* Add some padding for the overall print */
+        box-shadow: none !important;
+        border: none !important;
+        position: static !important;
+      }
+      body.print-active-page .printable-content-area * {
+        visibility: visible !important;
+        color: black !important; /* Default text to black for print */
+      }
+      /* Ensure prose styles translate to print */
+       body.print-active-page .printable-content-area .prose,
+       body.print-active-page .printable-content-area .prose h1,
+       body.print-active-page .printable-content-area .prose h2,
+       body.print-active-page .printable-content-area .prose h3,
+       body.print-active-page .printable-content-area .prose h4,
+       body.print-active-page .printable-content-area .prose strong {
+          color: black !important;
+       }
+       body.print-active-page .printable-content-area .prose p,
+       body.print-active-page .printable-content-area .prose li {
+          color: #222 !important; /* Darker gray for readability */
+       }
+       body.print-active-page .printable-content-area .prose a {
+          color: #007bff !important; /* Standard blue for links in print */
+          text-decoration: underline !important;
+       }
+        body.print-active-page .printable-content-area .glassmorphism { /* Remove glassmorphism for print */
+            background: white !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            border: 1px solid #ddd !important;
+        }
+        body.print-active-page .printable-content-area .text-content,
+        body.print-active-page .printable-content-area .text-content-muted,
+        body.print-active-page .printable-content-area .text-primary,
+        body.print-active-page .printable-content-area .text-secondary,
+        body.print-active-page .printable-content-area .text-accent {
+            color: black !important; /* Override specific text colors for print */
+        }
+        body.print-active-page .printable-content-area .bg-bground-light {
+            background-color: #f0f0f0 !important; /* Lighten dark backgrounds */
+        }
+
+
+      /* Styles for printing modal content */
+      body.print-active-modal > *:not(#modal-print-wrapper) {
+        display: none !important;
+      }
+      body.print-active-modal #modal-print-wrapper {
+        display: block !important;
+        visibility: visible !important;
+        position: absolute !important;
+        left: 0;
+        top: 0;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        background-color: white !important;
+        color: black !important;
+        padding: 20px !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      body.print-active-modal #modal-print-wrapper * {
+        visibility: visible !important;
+        color: black !important;
+      }
+       body.print-active-modal #modal-print-wrapper .prose h1,
+       body.print-active-modal #modal-print-wrapper .prose h2,
+       body.print-active-modal #modal-print-wrapper .prose h3,
+       body.print-active-modal #modal-print-wrapper .prose strong {
+         color: black !important;
+       }
+        body.print-active-modal #modal-print-wrapper .prose p,
+        body.print-active-modal #modal-print-wrapper .prose li {
+            color: #333 !important;
+        }
+    }
+
+  </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.6.2",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.6.0",
+    "marked": "https://esm.sh/marked@^12.0.2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
