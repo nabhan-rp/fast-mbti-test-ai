@@ -5,23 +5,22 @@
   "private": true,
   "scripts": {
     "dev": "echo 'No dev script configured. Serve index.html with a static server.'",
-    "build": "vite build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild index.tsx --bundle --outfile=bundle.js --define:process.env.NODE_ENV='\"production\"' --platform=browser --jsx=automatic"
   },
   "dependencies": {
-    "@google/genai": "^1.6.0",
+    "@google/genai": "^1.7.0",
+    "marked": "^12.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.23.1"
+    "react-router-dom": "^6.24.1"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",
-    "@vercel/node": "^3.0.22",
-    "typescript": "^5.4.5",
-    "vite": "^5.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "@types/react-router-dom": "^5.3.3"
- }
+    "@vercel/node": "^3.0.22",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.4.5"
+  }
 }
-
