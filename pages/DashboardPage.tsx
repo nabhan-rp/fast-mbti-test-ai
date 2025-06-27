@@ -75,12 +75,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
 
   const generatePersonalizedFeed = useCallback((currentProfileForFeed: MbtiResult | null) => {
     if (currentProfileForFeed) {
+      const fullMbtiType = `${currentProfileForFeed.mbtiType}-${currentProfileForFeed.identity}`;
       const langName = SUPPORTED_LANGUAGES.find(l => l.code === currentProfileForFeed.language)?.name || currentProfileForFeed.language;
       const feed: FeedItem[] = [
         {
           id: 'mbti-deep-dive',
-          title: `Explore Your ${currentProfileForFeed.mbtiType} Traits`,
-          description: `Delve deeper into the nuances of the ${currentProfileForFeed.mbtiType} (in ${langName}). Understand cognitive functions, common patterns, and more.`,
+          title: `Explore Your ${fullMbtiType} Traits`,
+          description: `Delve deeper into the nuances of the ${fullMbtiType} (in ${langName}). Understand cognitive functions, common patterns, and more.`,
           category: 'MBTI Deep Dive',
           icon: <BookOpenIcon className="w-8 h-8 text-pink-500" />,
           actionText: 'Learn More',
@@ -89,7 +90,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
         {
           id: 'develop-potential',
           title: 'Develop Untapped Potential',
-          description: `Every ${currentProfileForFeed.mbtiType} has areas they can develop further. Get personalized strategies (in ${langName}).`,
+          description: `Every ${fullMbtiType} has areas they can develop further. Get personalized strategies (in ${langName}) that consider your Assertive/Turbulent nature.`,
           category: 'Talent Discovery',
           icon: <UsersIcon className="w-8 h-8 text-yellow-500" />,
           actionText: 'Explore Development Strategies',
@@ -104,8 +105,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
         },
         {
           id: 'growth-mindset',
-          title: 'Cultivate a Growth Mindset',
-          description: `Embrace challenges as opportunities. Your ${currentProfileForFeed.mbtiType} type has unique ways to grow; let's explore them.`,
+          title: `Cultivate a ${currentProfileForFeed.identity === 'A' ? 'Confident' : 'Resilient'} Mindset`,
+          description: `Embrace challenges as opportunities. Your ${fullMbtiType} type has unique ways to grow; let's explore them.`,
           category: 'Self-Improvement',
           icon: <LightBulbIcon className="w-8 h-8 text-green-500" />,
         },
@@ -195,20 +196,21 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
     try {
       let rawContent: string | undefined; // Raw Markdown/text from Gemini
       let title: string = '';
+      const fullMbtiType = `${selectedResultForFeed.mbtiType}-${selectedResultForFeed.identity}`;
       const langName = SUPPORTED_LANGUAGES.find(l => l.code === languageForResult)?.name || languageForResult;
 
       if (actionType === 'mbtiExploration') {
-        title = `Deep Dive: ${selectedResultForFeed.mbtiType} (in ${langName})`;
+        title = `Deep Dive: ${fullMbtiType} (in ${langName})`;
         if (selectedResultForFeed.detailedMbtiExploration) {
           rawContent = selectedResultForFeed.detailedMbtiExploration;
         } else {
-          rawContent = await getDetailedMbtiExploration(selectedResultForFeed.mbtiType, selectedResultForFeed.personalitySummary || '', languageForResult);
+          rawContent = await getDetailedMbtiExploration(fullMbtiType, selectedResultForFeed.personalitySummary || '', languageForResult);
           const updatedResult = { ...selectedResultForFeed, detailedMbtiExploration: rawContent, language: languageForResult };
           setSelectedResultForFeed(updatedResult);
           updateStoredHistory(updatedResult);
         }
       } else if (actionType === 'developmentStrategies') {
-        title = `Development Strategies for ${selectedResultForFeed.mbtiType} (in ${langName})`;
+        title = `Development Strategies for ${fullMbtiType} (in ${langName})`;
         if (selectedResultForFeed.developmentStrategies) {
           rawContent = selectedResultForFeed.developmentStrategies;
         } else {
@@ -320,7 +322,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
                                     ? 'bg-primary/20 ring-2 ring-primary shadow-lg' 
                                     : 'bg-bground-light/60 hover:bg-primary/10 border border-neutral/20'}`}>
                     <p className="font-semibold text-lg text-content flex justify-between items-center">
-                      {result.mbtiType} 
+                      {result.mbtiType}-{result.identity} 
                       <span className={`text-xs px-2 py-0.5 rounded-full ${selectedResultForFeed?.timestamp === result.timestamp && selectedResultForFeed?.language === result.language ? 'bg-primary text-white' : 'bg-secondary text-white'}`}>
                         {result.language ? (SUPPORTED_LANGUAGES.find(l=>l.code === result.language)?.name.substring(0,3) || result.language) : 'N/A'}
                       </span>
@@ -337,7 +339,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
 
           {selectedResultForFeed && (
              <div id="selected-report-printable-section" className="glassmorphism p-6 rounded-xl shadow-xl mt-6 animate-fade-in border border-neutral/20">
-                <h3 className="text-xl font-display font-semibold mb-3 text-accent">Selected Report: {selectedResultForFeed.mbtiType}</h3>
+                <h3 className="text-xl font-display font-semibold mb-3 text-accent">Selected Report: {selectedResultForFeed.mbtiType}-{selectedResultForFeed.identity}</h3>
                  <p className="text-sm text-content-muted mb-1"><strong>Language:</strong> {SUPPORTED_LANGUAGES.find(l => l.code === selectedResultForFeed.language)?.name || selectedResultForFeed.language}</p>
                 <p className="text-sm text-content-muted mb-1"><strong>Summary:</strong> {(selectedResultForFeed.personalitySummary || selectedResultForFeed.mbtiExplanation || 'N/A').substring(0,100)}...</p>
                 <p className="text-sm text-content-muted mb-1"><strong>Career Snippet:</strong> {selectedResultForFeed.careerSuggestions?.[0] || 'N/A'}</p>
@@ -352,7 +354,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
                 </div>
                  {/* This div is for print-only header matching ResultsPage */}
                 <div className="print-only report-header text-center">
-                    <h1 className="text-2xl font-display font-bold mb-1">Personality Report: {selectedResultForFeed.mbtiType}</h1>
+                    <h1 className="text-2xl font-display font-bold mb-1">Personality Report: {selectedResultForFeed.mbtiType}-{selectedResultForFeed.identity}</h1>
                     <p className="text-lg font-semibold">{selectedResultForFeed.mbtiType} - {selectedResultForFeed.personalitySummary || selectedResultForFeed.mbtiExplanation || 'N/A'}</p>
                     {selectedResultForFeed.language && <p className="text-xs text-content-muted mt-1">(Results Language: {SUPPORTED_LANGUAGES.find(l => l.code === selectedResultForFeed.language)?.name || selectedResultForFeed.language})</p>}
                 </div>
@@ -360,6 +362,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
                 <div className="print-only mt-2">
                     <p><strong>Career Snippet:</strong> {selectedResultForFeed.careerSuggestions?.[0] || 'N/A'}</p>
                     {selectedResultForFeed.consciousnessLevelPrediction && <p><strong>Consciousness:</strong> {selectedResultForFeed.consciousnessLevelPrediction}</p>}
+                    <p><strong>Justification:</strong> {selectedResultForFeed.hawkinsInsight}</p>
                 </div>
              </div>
           )}

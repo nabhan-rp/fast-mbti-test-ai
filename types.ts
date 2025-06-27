@@ -1,6 +1,13 @@
 
 export interface MbtiResult {
   mbtiType: string;
+  identity: 'A' | 'T'; // Assertive or Turbulent
+  dichotomyPercentages: {
+    I: number; E: number; // Introversion / Extraversion
+    N: number; S: number; // Intuition / Sensing
+    T: number; F: number; // Thinking / Feeling
+    J: number; P: number; // Judging / Perceiving
+  };
   mbtiExplanation: string;
   careerSuggestions: string[];
   organizationalRoles: string[];

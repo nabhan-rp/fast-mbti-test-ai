@@ -17,31 +17,35 @@ export const processSelfDescription = async (userInput: string, languageCode: st
   const languageInstruction = `Respond in ${languageCode}. If the user's input is clearly in a different language, prioritize responding in the language of their input.`;
   
   const prompt = `
-You are an expert MBTI analyst, career counselor, and personal development coach.
+You are an expert MBTI analyst, career counselor, and personal development coach with deep knowledge of the "A/T" (Assertive/Turbulent) identity model and David Hawkins' Map of Consciousness.
 ${languageInstruction}
-Based on the following self-description, please provide a comprehensive analysis.
+Based on the following self-description, provide a comprehensive analysis. Look for clues about confidence, stress handling, and perfectionism to determine the A/T identity. Estimate the percentage breakdown for each MBTI dichotomy based on the user's text. Your analysis of Hawkins' LoC should be insightful, and New Age tips should be personalized to that LoC. Career/Org roles should be detailed.
 It is crucial that you understand and interpret abbreviations, slang, or common typos in the user's input before making your analysis.
 
 User's self-description:
 "${userInput}"
 
-Please format your response strictly as a JSON object with the following keys and value types:
+Please format your response strictly as a JSON object with the following structure and value types:
 - "mbtiType": string (e.g., "INTJ", "ESFP")
+- "identity": string ("A" for Assertive or "T" for Turbulent)
+- "dichotomyPercentages": object with keys "I", "E", "N", "S", "T", "F", "J", "P", and integer values from 0-100, where I+E=100, N+S=100, etc. (e.g., { "I": 70, "E": 30, ... })
 - "personalitySummary": string (1-2 sentences)
-- "mbtiExplanation": string (2-3 sentences)
-- "careerSuggestions": array of strings (3-5 suggestions)
-- "organizationalRoles": array of strings (2-3 suggestions)
+- "mbtiExplanation": string (2-3 sentences explaining the type and A/T identity)
+- "careerSuggestions": array of strings (3-5 detailed suggestions)
+- "organizationalRoles": array of strings (2-3 detailed suggestions)
 - "educationalAdvice": string
 - "dailyLifeTips": string
-- "hawkinsInsight": string (David Hawkins' Map of Consciousness insight)
+- "hawkinsInsight": string (A detailed David Hawkins' Map of Consciousness insight, linking their potential LoC to their described behaviors.)
+- "consciousnessLevelPrediction": string (e.g., "Operates at Reason (400), exploring Love (500). Justification: ...")
 - "newAgeConcept": string (New Age concept for growth)
+- "detailedNewAgeSuggestions": array of strings (2-3 actionable tips to raise their LoC)
 - "language": string (The ISO 639-1 code of the language used for this response, e.g., "${languageCode}")
 
 Example for "language" field: "language": "${languageCode}"
+Example for dichotomyPercentages: { "I": 20, "E": 80, "N": 70, "S": 30, "T": 40, "F": 60, "J": 85, "P": 15 }
 
 Ensure the entire response is a single, valid JSON object. Do not include any text outside of this JSON object.
 Do not use markdown like \`\`\`json ... \`\`\` around the JSON response.
-The "language" field in the JSON output MUST match the language you are using for the response text (e.g., if responding in Indonesian, set "language": "id").
 `;
 
   try {
@@ -55,7 +59,7 @@ The "language" field in the JSON output MUST match the language you are using fo
     });
     let jsonStr = response.text.trim();
     const parsedData = JSON.parse(jsonStr);
-    if (!parsedData.mbtiType || !parsedData.mbtiExplanation || !parsedData.language) {
+    if (!parsedData.mbtiType || !parsedData.identity || !parsedData.dichotomyPercentages || !parsedData.language) {
         throw new Error("Received incomplete or malformed data from AI for description analysis.");
     }
     return parsedData as MbtiResult;
@@ -89,43 +93,45 @@ export const startOrContinueQnA = async (languageCode: string, initialDescriptio
   const qnaHistoryString = history.map(item => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n');
   let langInstruction = `Generate all questions and interactions in ${languageCode}.`;
 
+  const coreGoal = `Your goal is to deeply understand the user to determine their:
+1. MBTI type (I/E, N/S, T/F, J/P).
+2. MBTI identity (Assertive/Turbulent - A/T) by asking about confidence, stress response, and perfectionism.
+3. Level of Consciousness (Hawkins' map) by asking about worldview, core motivations, and emotional patterns.
+The questions should be engaging, multiple-choice (3-4 options), and adapt based on previous answers.`;
+
+
   if (history.length === 0) { // First question
     if (initialDescription) { // Hybrid mode
-      // For hybrid, Gemini should try to use language of initialDescription if languageCode is generic like 'en' but description is different.
-      // However, if a specific languageCode is passed, that should be honored.
-      // The prompt will guide it to use the language of the description if it's clear and specific, otherwise stick to languageCode.
       langInstruction = `The user wants to interact in ${languageCode}. The user has provided an initial self-description: "${initialDescription}". Generate your first question and all subsequent interactions in ${languageCode}. If the initial description is clearly in a language different from ${languageCode} and ${languageCode} is 'en', you may switch to the language of the initial description for a better user experience, and continue all interactions in that language.`;
 
-      prompt = `You are an AI assistant facilitating an MBTI and personality assessment.
+      prompt = `You are an AI assistant for a deep personality assessment.
 ${langInstruction}
-Based on this, your goal is to understand the user more deeply through a series of multiple-choice questions.
-Also gather insights to estimate their general level of consciousness (David Hawkins' Map of Consciousness principles), focusing on typical reactions/interactions.
-Formulate the first multiple-choice question (3-4 options) that logically follows from their description or explores an interesting aspect.
-Questions should become progressively more specific.
+${coreGoal}
+Based on their initial description, formulate the first insightful multiple-choice question.
 Response JSON: {"question": "...", "choices": ["...", "..."], "isFinal": false}
-Do not include any text outside of this JSON object. No markdown.`;
+No markdown.`;
     } else { // Pure Q&A mode
-      prompt = `You are an AI assistant for MBTI & personality assessment.
+      prompt = `You are an AI assistant for a deep personality assessment.
 ${langInstruction}
-Goal: Understand user deeply via multiple-choice Q&A. Estimate consciousness level (David Hawkins' Map) based on reactions/interactions.
-Ask an engaging first question (3-4 multiple choice options). Questions adapt to answers.
+${coreGoal}
+Start with an engaging first question to begin the assessment.
 Response JSON: {"question": "...", "choices": ["...", "..."], "isFinal": false}
-Do not include any text outside of this JSON object. No markdown.`;
+No markdown.`;
     }
   } else { // Subsequent questions
     const lastEntry = history[history.length -1];
-    prompt = `You are an AI for MBTI & personality assessment.
+    prompt = `You are an AI for a deep personality assessment.
 ${langInstruction}
+${coreGoal}
 Initial Description (if any): "${initialDescription || 'Not provided'}"
 Conversation History (in ${languageCode}):
 ${qnaHistoryString}
 
 User just answered "${lastEntry.answer}" to question "${lastEntry.question}".
-Formulate the next relevant multiple-choice question (3-4 options) in ${languageCode} for MBTI traits and consciousness level.
-If you have enough information for a full analysis (MBTI, consciousness, detailed New Age advice), set "isFinal" to true and omit "question" and "choices".
-Otherwise, provide the next question.
+Formulate the next relevant multiple-choice question in ${languageCode}.
+If you have sufficient information for a full, detailed analysis on all points (MBTI, A/T, LoC), set "isFinal" to true. Otherwise, provide the next question.
 Response JSON: {"question": "...", "choices": ["...", "..."], "isFinal": boolean} or {"isFinal": true}
-Do not include any text outside of this JSON object. No markdown.`;
+No markdown.`;
   }
 
   try {
@@ -134,7 +140,7 @@ Do not include any text outside of this JSON object. No markdown.`;
       contents: [{ role: "user", parts: [{text: prompt}]}],
       config: {
         responseMimeType: "application/json",
-        temperature: 0.6, 
+        temperature: 0.65, 
       }
     });
     return parseQnAResponse(response.text);
@@ -151,33 +157,37 @@ export const getAnalysisFromQnA = async (languageCode: string, initialDescriptio
   const langInstruction = `Generate the entire analysis and all text fields in ${languageCode}. The "language" field in the JSON output must be "${languageCode}".`;
 
 
-  const prompt = `You are an expert MBTI analyst, career counselor, and personal development coach.
+  const prompt = `You are an expert MBTI analyst, career counselor, and personal development coach with deep knowledge of the "A/T" (Assertive/Turbulent) identity model and David Hawkins' Map of Consciousness.
 ${langInstruction}
 The user has completed a Q&A session.
-User's initial self-description (if provided, language may vary, but your output must be in ${languageCode}): "${initialDescription || 'Not provided'}"
+User's initial self-description (if provided): "${initialDescription || 'Not provided'}"
 
 Q&A History (conducted in ${languageCode}):
 ${qnaHistoryString}
 
 Based on the initial description (if provided) and the entire Q&A history, provide a comprehensive analysis.
-Estimate the user's general level of consciousness based on David Hawkins' Map of Consciousness, informed by their responses about daily interactions and emotional patterns. Explain your reasoning briefly.
-Provide more in-depth and personalized New Age suggestions for this user.
+Determine the A/T identity from answers about stress, confidence, etc.
+Calculate the percentage breakdown for each MBTI dichotomy.
+Provide a more detailed and justified Hawkins' LoC analysis.
+Personalize the New Age tips to help the user raise their LoC.
+Career/Org roles should be more detailed.
 
 Format response strictly as a JSON object with keys:
 - "mbtiType": string
+- "identity": string ("A" for Assertive or "T" for Turbulent)
+- "dichotomyPercentages": object with keys "I", "E", "N", "S", "T", "F", "J", "P", and integer values from 0-100, where I+E=100, N+S=100, etc.
 - "personalitySummary": string (concise summary from Q&A)
-- "mbtiExplanation": string (MBTI fit from Q&A)
-- "careerSuggestions": array of strings (3-5)
-- "organizationalRoles": array of strings (2-3)
+- "mbtiExplanation": string (MBTI and A/T fit from Q&A)
+- "careerSuggestions": array of strings (3-5 detailed suggestions)
+- "organizationalRoles": array of strings (2-3 detailed suggestions)
 - "educationalAdvice": string
 - "dailyLifeTips": string
-- "hawkinsInsight": string (core Hawkins insight)
-- "consciousnessLevelPrediction": string (e.g., "Courage with Pride tendencies", "Operates at Reason, exploring Love" - include brief justification)
+- "hawkinsInsight": string (A detailed David Hawkins' Map of Consciousness insight, linking their potential LoC to their described behaviors.)
+- "consciousnessLevelPrediction": string (e.g., "Operates at Reason (400), exploring Love (500). Justification: ...")
 - "newAgeConcept": string (primary New Age concept)
-- "detailedNewAgeSuggestions": array of strings (2-3 actionable, personalized New Age practices)
+- "detailedNewAgeSuggestions": array of strings (2-3 actionable tips to raise their LoC)
 - "language": string (The ISO 639-1 code of the language used for this response, MUST BE "${languageCode}")
 
-Example for "language" field: "language": "${languageCode}"
 Ensure the entire response is a single, valid JSON object. No markdown.
 `;
 
@@ -193,13 +203,12 @@ Ensure the entire response is a single, valid JSON object. No markdown.
     let jsonStr = response.text.trim();
     const parsedData = JSON.parse(jsonStr);
     
-    if (!parsedData.mbtiType || !parsedData.consciousnessLevelPrediction || !parsedData.detailedNewAgeSuggestions || !parsedData.language) {
+    if (!parsedData.mbtiType || !parsedData.identity || !parsedData.dichotomyPercentages || !parsedData.consciousnessLevelPrediction || !parsedData.detailedNewAgeSuggestions || !parsedData.language) {
         throw new Error("Received incomplete or malformed data from AI for Q&A analysis.");
     }
     // Ensure the language field from AI matches requested, or handle discrepancy
     if (parsedData.language !== languageCode) {
         console.warn(`AI responded in ${parsedData.language} but ${languageCode} was requested. Using AI's reported language.`);
-        // Potentially override: parsedData.language = languageCode; if strict adherence is needed
     }
     return parsedData as MbtiResult;
   } catch (error) {
@@ -251,7 +260,8 @@ export const getDevelopmentStrategies = async (result: MbtiResult, languageCode:
   const prompt = `
 You are a personal development coach specializing in MBTI and holistic growth.
 The user has the following personality profile (content is in ${result.language || 'unknown language, assume English if not specified, but respond in target language'}):
-- MBTI Type: ${result.mbtiType}
+- MBTI Type: ${result.mbtiType}-${result.identity}
+- Dichotomy Percentages: I/E: ${result.dichotomyPercentages.I}/${result.dichotomyPercentages.E}, N/S: ${result.dichotomyPercentages.N}/${result.dichotomyPercentages.S}, T/F: ${result.dichotomyPercentages.T}/${result.dichotomyPercentages.F}, J/P: ${result.dichotomyPercentages.J}/${result.dichotomyPercentages.P}
 - Personality Summary: ${result.personalitySummary || 'Not available'}
 - Career Suggestions: ${result.careerSuggestions.join(', ')}
 - Organizational Roles: ${result.organizationalRoles.join(', ')}
@@ -264,11 +274,11 @@ The user has the following personality profile (content is in ${result.language 
 
 Based on this complete profile, provide highly personalized and actionable development strategies IN ${languageCode}.
 Focus on:
-1.  Leveraging their core ${result.mbtiType} strengths for specific goals.
-2.  Addressing potential blind spots or challenges typical for ${result.mbtiType}.
-3.  Practical exercises or reflection prompts related to their Hawkins insight or consciousness level.
-4.  Ways to integrate their suggested New Age concept or practices more deeply.
-5.  Tips for developing "untapped potential".
+1.  Leveraging their core ${result.mbtiType} strengths, considering their ${result.identity} identity (e.g., how an ENFJ-A leads vs an ENFJ-T).
+2.  Addressing blind spots, especially those common for their -${result.identity} variant.
+3.  Practical exercises or reflection prompts related to their Hawkins insight and to help them elevate their consciousness level.
+4.  Ways to integrate their suggested New Age concept more deeply to foster growth.
+5.  Tips for developing "untapped potential" by balancing their dichotomies (e.g., if highly Extraverted, suggest ways to develop their Introverted side).
 
 The strategies should be empathetic, encouraging, and provide clear steps or ideas, all in ${languageCode}.
 Format the output as a single string containing well-structured text. You can use simple Markdown for formatting.

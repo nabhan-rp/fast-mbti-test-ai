@@ -1,6 +1,7 @@
+
 {
-  "name": "Fitur Export PDF Fixed + A/T & % of MBTI Personality Insights AI",
-  "description": "An AI-powered application to discover your MBTI personality type, explore suitable career paths, organizational roles, educational directions, and receive personalized self-improvement suggestions based on your self-description. Integrates concepts like David Hawkins' Map of Consciousness and New Age literature for deeper insights. Added 5 feature, export PDF (fix bugs), option to deep learn MBTI, show presentase of I/E , N/S, T/F and J/P, with -A or -T , and 3 option to find your personalities. ",
+  "name": "MBTI Personality Insights AI: A/T & % Analysis",
+  "description": "An AI-powered application to discover your MBTI personality type (-A or -T) with percentage breakdowns for each dichotomy. Explores suitable career paths, organizational roles, educational directions, and receives personalized self-improvement suggestions based on your self-description or a dynamic Q&A. Integrates concepts like David Hawkins' Map of Consciousness and New Age literature for deeper, actionable insights for growth.",
   "requestFramePermissions": [],
   "prompt": ""
 }

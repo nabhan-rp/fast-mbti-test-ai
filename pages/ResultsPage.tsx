@@ -15,6 +15,20 @@ interface ResultsPageProps {
   setLatestResult: (result: MbtiResult | null) => void;
 }
 
+const DichotomyMeter: React.FC<{ leftLabel: string, rightLabel: string, leftValue: number, rightValue: number, leftColor: string, rightColor: string }> = ({ leftLabel, rightLabel, leftValue, rightValue, leftColor, rightColor }) => (
+    <div>
+        <div className="flex justify-between items-center text-sm font-semibold mb-1">
+            <span className={`text-${leftColor}`}>{leftLabel} ({leftValue}%)</span>
+            <span className={`text-${rightColor}`}>{rightLabel} ({rightValue}%)</span>
+        </div>
+        <div className="w-full flex h-3 rounded-full overflow-hidden bg-bground-light">
+            <div style={{ width: `${leftValue}%` }} className={`shadow-inner transition-all duration-500 bg-${leftColor}`}></div>
+            <div style={{ width: `${rightValue}%` }} className={`shadow-inner transition-all duration-500 bg-${rightColor}`}></div>
+        </div>
+    </div>
+);
+
+
 const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }) => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -34,6 +48,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
 
   const mbtiDetails = MBTI_DESCRIPTIONS[resultData.mbtiType as MbtiType] || { summary: "No detailed description available.", strengths: [], weaknesses: [] };
   const currentLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === resultData.language)?.name || resultData.language || "English";
+  const fullMbtiType = `${resultData.mbtiType}-${resultData.identity}`;
 
   const handleSaveResult = () => {
     if (!currentUser) {
@@ -61,14 +76,21 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
   };
 
   const handleEmailResult = () => {
-    const subject = `Your MBTI Personality Insights: ${resultData.mbtiType} (in ${currentLanguageName})`;
+    const subject = `Your MBTI Personality Insights: ${fullMbtiType} (in ${currentLanguageName})`;
     let body = `
       Hello,
 
       Here are your MBTI Personality Insights (Language: ${currentLanguageName}):
 
-      Your Type: ${resultData.mbtiType}
+      Your Type: ${fullMbtiType}
       Summary: ${resultData.personalitySummary || mbtiDetails.summary}
+      
+      Dichotomy Breakdown:
+      - Introversion/Extraversion: ${resultData.dichotomyPercentages.I}% / ${resultData.dichotomyPercentages.E}%
+      - Intuition/Sensing: ${resultData.dichotomyPercentages.N}% / ${resultData.dichotomyPercentages.S}%
+      - Thinking/Feeling: ${resultData.dichotomyPercentages.T}% / ${resultData.dichotomyPercentages.F}%
+      - Judging/Perceiving: ${resultData.dichotomyPercentages.J}% / ${resultData.dichotomyPercentages.P}%
+
       Explanation: ${resultData.mbtiExplanation}
 
       Career Suggestions:
@@ -171,7 +193,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
       <header className="text-center py-12 bg-gradient-to-br from-primary/40 via-bground/70 to-bground rounded-xl shadow-2xl p-6 relative overflow-hidden no-print">
         <SparklesIcon className="w-16 h-16 text-accent mx-auto mb-4 animate-pulse" />
         <h1 className="text-4xl md:text-5xl font-display font-bold mb-3 text-shadow-accent-glow">Your Personality Revealed</h1>
-        <p className="text-3xl text-primary font-semibold font-display tracking-wider">{resultData.mbtiType}</p>
+        <p className="text-3xl text-primary font-semibold font-display tracking-wider">{fullMbtiType}</p>
         <p className="text-lg text-content-muted max-w-2xl mx-auto mt-2">
           {resultData.personalitySummary || mbtiDetails.summary}
         </p>
@@ -180,14 +202,21 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
       
       {/* This section will be visible for print, mimicking the header */}
       <div className="print-only report-header text-center">
-        <h1 className="text-3xl font-display font-bold mb-2">Personality Report: {resultData.mbtiType}</h1>
+        <h1 className="text-3xl font-display font-bold mb-2">Personality Report: {fullMbtiType}</h1>
         <p className="text-xl font-semibold mb-1">{resultData.mbtiType} - {resultData.personalitySummary || mbtiDetails.summary}</p>
         {resultData.language && <p className="text-sm text-content-muted mt-1">(Results Language: {currentLanguageName})</p>}
       </div>
 
-
       <section className="glassmorphism p-6 sm:p-8 rounded-xl shadow-xl space-y-8 border border-neutral/20">
-        <div className="flex flex-wrap gap-4 justify-center items-center py-6 border-b border-neutral/20 action-buttons-container no-print">
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+            <DichotomyMeter leftLabel="Introversion (I)" rightLabel="Extraversion (E)" leftValue={resultData.dichotomyPercentages.I} rightValue={resultData.dichotomyPercentages.E} leftColor="pink-500" rightColor="blue-500" />
+            <DichotomyMeter leftLabel="Intuition (N)" rightLabel="Sensing (S)" leftValue={resultData.dichotomyPercentages.N} rightValue={resultData.dichotomyPercentages.S} leftColor="purple-500" rightColor="teal-500" />
+            <DichotomyMeter leftLabel="Thinking (T)" rightLabel="Feeling (F)" leftValue={resultData.dichotomyPercentages.T} rightValue={resultData.dichotomyPercentages.F} leftColor="yellow-500" rightColor="green-500" />
+            <DichotomyMeter leftLabel="Judging (J)" rightLabel="Perceiving (P)" leftValue={resultData.dichotomyPercentages.J} rightValue={resultData.dichotomyPercentages.P} leftColor="orange-500" rightColor="indigo-500" />
+        </div>
+        
+        <div className="flex flex-wrap gap-4 justify-center items-center py-6 border-t border-b border-neutral/20 action-buttons-container no-print">
             <ActionButton onClick={handlePrintOrExportPdf} text="Print / Save PDF" icon={<PrinterIcon className="w-5 h-5"/>} className="bg-teal-600 hover:bg-teal-700 text-white"/>
             <ActionButton onClick={handleSaveResult} text="Save Result" icon={<BriefcaseIcon className="w-5 h-5"/>} className="bg-pink-600 hover:bg-pink-700 text-white"/>
             <ActionButton onClick={handleEmailResult} text="Email Me This" icon={<LightBulbIcon className="w-5 h-5"/>} className="bg-blue-600 hover:bg-blue-700 text-white" />
@@ -197,7 +226,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
 
         <div className="grid md:grid-cols-2 gap-8">
           <div className="space-y-6">
-            <ResultCard title="MBTI Explanation" icon={<BookOpenIcon className="text-pink-500" />}>
+            <ResultCard title={`Understanding ${fullMbtiType}`} icon={<BookOpenIcon className="text-pink-500" />}>
               <p className="text-content-muted leading-relaxed">{resultData.mbtiExplanation}</p>
               {mbtiDetails && (
                 <div className="mt-4">
