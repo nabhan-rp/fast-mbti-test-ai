@@ -233,40 +233,52 @@
       }
 
       /* Page printing logic: Isolate the main printable container */
-      body.print-active-page #root > nav, 
-      body.print-active-page #root > footer {
+      body.print-active-page #root > div > nav, 
+      body.print-active-page #root > div > footer {
         display: none !important;
       }
-      body.print-active-page #root > main > *:not(.printable-content-area) {
+      body.print-active-page #root > div > main > *:not(.printable-content-area) {
         display: none !important;
       }
 
-      /* Modal printing logic: Isolate the modal */
+      /* Modal printing logic: Isolate the modal and allow it to expand */
       body.print-active-modal {
-          margin: 0; /* Reset body margin for modal print */
-      }
-      body.print-active-modal .no-print {
-          display: none !important; /* Redundant but safe */
-      }
-      body.print-active-modal #root > nav, 
-      body.print-active-modal #root > footer,
-      body.print-active-modal .printable-content-area > *:not(.modal-print-host) {
-        display: none !important;
+          margin: 0;
+          overflow: visible !important;
       }
       
+      /* Hide everything except the modal host's ancestor chain and the modal itself */
+      body.print-active-modal > *:not(#root) { display: none !important; }
+      body.print-active-modal #root > div > *:not(main) { display: none !important; }
+      body.print-active-modal main > *:not(.printable-content-area) { display: none !important; }
+      body.print-active-modal .printable-content-area > *:not(.modal-print-host) { display: none !important; }
+
+      /* Ensure all containers in the modal's path can expand */
+      body.print-active-modal,
+      body.print-active-modal #root,
+      body.print-active-modal #root > div,
+      body.print-active-modal main,
+      body.print-active-modal .printable-content-area {
+        display: block !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+      }
+      
+      /* Reset modal styles for printing to make it a static block */
       body.print-active-modal .modal-print-host {
           position: static !important;
-          padding: 0 !important;
-          background-color: transparent !important;
+          display: block !important;
+          background: transparent !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
           border: none !important;
           box-shadow: none !important;
+          padding: 0 !important;
       }
       
-      body.print-active-modal .modal-print-host > div { /* The inner modal structure div */
-          position: static !important;
-          display: block !important;
+      body.print-active-modal .modal-print-host > div {
+          height: auto !important;
           max-height: none !important;
           box-shadow: none !important;
           border: none !important;
@@ -274,9 +286,10 @@
       }
 
       body.print-active-modal #modal-print-wrapper {
-          padding: 1rem !important;
           overflow: visible !important;
           max-height: none !important;
+          height: auto !important;
+          padding: 1rem !important;
       }
     }
 

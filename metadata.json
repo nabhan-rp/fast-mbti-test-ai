@@ -1,7 +1,6 @@
-
 {
-  "name": "MBTI Personality Insights AI: A/T & % Analysis",
-  "description": "An AI-powered application to discover your MBTI personality type (-A or -T) with percentage breakdowns for each dichotomy. Explores suitable career paths, organizational roles, educational directions, and receives personalized self-improvement suggestions based on your self-description or a dynamic Q&A. Integrates concepts like David Hawkins' Map of Consciousness and New Age literature for deeper, actionable insights for growth.",
+  "name": "Layout Fix MBTI Personality Insights AI: A/T & % Analysis",
+  "description": "Layout Fix An AI-powered application to discover your MBTI personality type (-A or -T) with percentage breakdowns for each dichotomy. Explores suitable career paths, organizational roles, educational directions, and receives personalized self-improvement suggestions based on your self-description or a dynamic Q&A. Integrates concepts like David Hawkins' Map of Consciousness and New Age literature for deeper, actionable insights for growth.",
   "requestFramePermissions": [],
   "prompt": ""
 }

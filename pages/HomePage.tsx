@@ -406,14 +406,17 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
       {viewState === 'finalizing' && renderFinalizingView()}
 
       {viewState === 'selection' && (
-         <section className="mt-16 p-8 bg-bground-light rounded-xl shadow-2xl border border-neutral/20">
-          <h2 className="text-3xl lg:text-4xl font-display font-bold text-center mb-10 text-secondary">Why This Matters</h2>
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <InfoPillar icon={<LightBulbIcon className="text-accent w-10 h-10"/>} title="Understand Yourself" description="Gain deeper clarity on your motivations, strengths, and areas for growth."/>
-            <InfoPillar icon={<BriefcaseIcon className="text-accent w-10 h-10"/>} title="Find Your Path" description="Discover career and educational directions that align with your true nature."/>
-            <InfoPillar icon={<UsersIcon className="text-accent w-10 h-10"/>} title="Improve Relationships" description="Learn how your personality impacts interactions and build stronger connections."/>
-          </div>
-        </section>
+         <>
+            <section className="mt-16 p-8 bg-bground-light rounded-xl shadow-2xl border border-neutral/20">
+              <h2 className="text-3xl lg:text-4xl font-display font-bold text-center mb-10 text-secondary">Why This Matters</h2>
+              <div className="grid md:grid-cols-3 gap-8 text-center">
+                <InfoPillar icon={<LightBulbIcon className="text-accent w-10 h-10"/>} title="Understand Yourself" description="Gain deeper clarity on your motivations, strengths, and areas for growth."/>
+                <InfoPillar icon={<BriefcaseIcon className="text-accent w-10 h-10"/>} title="Find Your Path" description="Discover career and educational directions that align with your true nature."/>
+                <InfoPillar icon={<UsersIcon className="text-accent w-10 h-10"/>} title="Improve Relationships" description="Learn how your personality impacts interactions and build stronger connections."/>
+              </div>
+            </section>
+            <FaqSection />
+         </>
       )}
     </div>
   );
@@ -455,6 +458,57 @@ const InfoPillar: React.FC<InfoPillarProps> = ({icon, title, description}) => (
         <h3 className="text-xl font-display font-semibold mb-2 text-content">{title}</h3>
         <p className="text-content-muted text-sm">{description}</p>
     </div>
+);
+
+const faqData = [
+  {
+    q: "What is the MBTI?",
+    a: "The Myers-Briggs Type Indicator (MBTI) is an introspective self-report questionnaire indicating differing psychological preferences in how people perceive the world and make decisions. It categorizes personalities into 16 types based on four dichotomies: Introversion (I) or Extraversion (E), Sensing (S) or Intuition (N), Thinking (T) or Feeling (F), and Judging (J) or Perceiving (P)."
+  },
+  {
+    q: "What does -A / -T (Assertive / Turbulent) mean?",
+    a: "This is an additional layer on top of the classic MBTI types that describes how you respond to life's challenges. Assertive (-A) individuals are typically self-assured, even-tempered, and resistant to stress. Turbulent (-T) individuals are more self-conscious, sensitive to stress, and driven by a desire for improvement."
+  },
+  {
+    q: "How does this AI test work?",
+    a: "This application uses a powerful AI model (Google's Gemini) to analyze your personality. In 'Description' mode, it reads your self-description. In 'Q&A' mode, it asks a series of adaptive questions. The AI then identifies patterns related to the MBTI dichotomies and the A/T identity to generate your personalized report."
+  },
+  {
+    q: "Is this test scientifically validated?",
+    a: "While the MBTI is widely used for personal development, its scientific validity and reliability are debated in academic psychology. This AI-powered test is an interpretation based on your input and should be used for entertainment, self-reflection, and exploration, not as a clinical diagnosis or a substitute for professional advice."
+  },
+  {
+    q: "What are the 'Map of Consciousness' and 'New Age' concepts?",
+    a: "These are additional frameworks for growth. David Hawkins' Map of Consciousness is a model that links emotional states to levels of awareness, providing a roadmap for spiritual growth. 'New Age' concepts refer to various modern spiritual practices like mindfulness, manifestation, and energy work that can complement your self-development journey. This app integrates them to provide deeper, more holistic insights."
+  }
+];
+
+const FaqItem: React.FC<{ q: string; a: string; }> = ({ q, a }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="py-5 border-b border-neutral/20 last:border-b-0">
+      <button onClick={() => setIsOpen(!isOpen)} className="flex justify-between items-center w-full text-left" aria-expanded={isOpen}>
+        <h4 className="text-lg font-semibold text-content">{q}</h4>
+        <svg className={`w-6 h-6 text-accent transform transition-transform duration-300 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+      </button>
+      {isOpen && (
+        <div className="mt-4 text-content-muted animate-fade-in prose prose-sm max-w-none">
+          <p>{a}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const FaqSection: React.FC = () => (
+  <section className="mt-16 p-8 bg-bground-light rounded-xl shadow-2xl border border-neutral/20">
+    <h2 className="text-3xl lg:text-4xl font-display font-bold text-center mb-10 text-secondary">Frequently Asked Questions</h2>
+    <div className="max-w-3xl mx-auto">
+      {faqData.map((faq, index) => (
+        <FaqItem key={index} q={faq.q} a={faq.a} />
+      ))}
+    </div>
+  </section>
 );
 
 

@@ -306,7 +306,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
         </p>
       </section>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <aside className="lg:col-span-1 space-y-6">
           <div className="glassmorphism p-6 rounded-xl shadow-xl border border-neutral/20 no-print">
             <h2 className="text-2xl font-display font-semibold mb-5 text-secondary flex items-center">
