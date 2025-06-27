@@ -179,8 +179,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
   };
 
   const handleFeedActionClick = async (actionType: 'mbtiExploration' | 'developmentStrategies') => {
-    if (!selectedResultForFeed) {
-      setModalError("No result selected to explore.");
+    if (!selectedResultForFeed || !process.env.API_KEY) {
+      setModalError(process.env.API_KEY ? "No result selected to explore." : "API Key not configured. This feature is unavailable.");
       setIsModalOpen(true);
       return;
     }
@@ -193,7 +193,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
     setCopySuccessMessage(null);
 
     try {
-      let rawContent: string | undefined;
+      let rawContent: string | undefined; // Raw Markdown/text from Gemini
       let title: string = '';
       const langName = SUPPORTED_LANGUAGES.find(l => l.code === languageForResult)?.name || languageForResult;
 
@@ -221,6 +221,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
 
       if (rawContent) {
         const htmlContent = await marked.parse(rawContent);
+        // For textContent, create a temporary element to strip HTML for copying
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = htmlContent;
         const textContent = tempDiv.textContent || tempDiv.innerText || "";
@@ -241,11 +242,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
     if (!selectedResultForFeed) return;
 
     document.body.classList.add('print-active-page');
-    const mainContentArea = printableDashboardContentRef.current; 
+    const mainContentArea = printableDashboardContentRef.current; // Use a ref for the printable area
     if (mainContentArea) {
-        mainContentArea.classList.add('printable-content-area'); 
+        mainContentArea.classList.add('printable-content-area'); // Add class to target for print
     }
 
+
+    // Logic to include detailed exploration and strategies if available
     const explorationContent = selectedResultForFeed.detailedMbtiExploration ? await marked.parse(selectedResultForFeed.detailedMbtiExploration) : null;
     const strategiesContent = selectedResultForFeed.developmentStrategies ? await marked.parse(selectedResultForFeed.developmentStrategies) : null;
 
@@ -256,7 +259,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
     if (explorationContent || strategiesContent) {
         tempDetailsContainer = document.createElement('div');
         tempDetailsContainer.id = tempDetailsContainerId;
-        tempDetailsContainer.className = 'print-only'; 
+        tempDetailsContainer.className = 'print-only'; // This class makes it visible for print
 
         let htmlToInject = '';
         if (explorationContent) {
@@ -267,13 +270,15 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
         }
         tempDetailsContainer.innerHTML = htmlToInject;
         
+        // Append to the section displaying the selected result's summary.
+        // This requires the parent div of the "Selected Report" section to be the printable area.
         const selectedReportSection = document.getElementById('selected-report-printable-section');
         if (selectedReportSection) {
             selectedReportSection.appendChild(tempDetailsContainer);
         } else if (mainContentArea) {
-            mainContentArea.appendChild(tempDetailsContainer); 
+            mainContentArea.appendChild(tempDetailsContainer); // Fallback
         } else {
-            document.body.appendChild(tempDetailsContainer);
+            document.body.appendChild(tempDetailsContainer); // Last resort
         }
     }
     
