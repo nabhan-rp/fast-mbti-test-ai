@@ -67,7 +67,11 @@ The "language" field in the JSON output MUST match the language you are using fo
     },
   });
 
-  const parsedData = robustJsonParse(response.text);
+  const text = response.text;
+  if (!text) {
+      throw new Error("AI returned an empty response for description analysis.");
+  }
+  const parsedData = robustJsonParse(text);
   if (!parsedData.mbtiType || !parsedData.mbtiExplanation || !parsedData.language) {
       throw new Error("Received incomplete or malformed data from AI for description analysis.");
   }
@@ -111,7 +115,11 @@ async function startOrContinueQnA(ai: GoogleGenAI, payload: any): Promise<QnASte
       temperature: 0.6,
     }
   });
-  return parseQnAStep(response.text);
+  const text = response.text;
+  if (!text) {
+      throw new Error("AI returned an empty response during Q&A step.");
+  }
+  return parseQnAStep(text);
 }
 
 async function getAnalysisFromQnA(ai: GoogleGenAI, payload: any): Promise<MbtiResult> {
@@ -132,7 +140,11 @@ async function getAnalysisFromQnA(ai: GoogleGenAI, payload: any): Promise<MbtiRe
     },
   });
 
-  const parsedData = robustJsonParse(response.text);
+  const text = response.text;
+  if (!text) {
+      throw new Error("AI returned an empty response for Q&A analysis.");
+  }
+  const parsedData = robustJsonParse(text);
   if (!parsedData.mbtiType || !parsedData.consciousnessLevelPrediction || !parsedData.detailedNewAgeSuggestions || !parsedData.language) {
       throw new Error("Received incomplete or malformed data from AI for Q&A analysis.");
   }
@@ -153,7 +165,11 @@ async function getDetailedMbtiExploration(ai: GoogleGenAI, payload: any): Promis
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: { temperature: 0.7 },
   });
-  return response.text;
+  const text = response.text;
+  if (!text) {
+      throw new Error("AI returned an empty response for detailed exploration.");
+  }
+  return text;
 }
 
 async function getDevelopmentStrategies(ai: GoogleGenAI, payload: any): Promise<string> {
@@ -181,7 +197,11 @@ Based on this complete profile, provide highly personalized and actionable devel
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: { temperature: 0.75 },
   });
-  return response.text;
+  const text = response.text;
+  if (!text) {
+      throw new Error("AI returned an empty response for development strategies.");
+  }
+  return text;
 }
 
 
