@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "echo 'No dev script configured. Serve index.html with a static server.'",
+    "build": "vite build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -13,6 +14,8 @@
   "devDependencies": {
     "@types/node": "^20.12.12",
     "@vercel/node": "^3.0.22",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vite": "^5.0.0"
   }
 }
+
