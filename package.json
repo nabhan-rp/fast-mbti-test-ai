@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "echo 'No dev script configured. Serve index.html with a static server.'",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "esbuild index.tsx --bundle --outfile=bundle.js --define:process.env.NODE_ENV='\"production\"' --platform=browser --jsx=automatic"
+    "build": "esbuild index.tsx --bundle --outfile=dist/bundle.js --define:process.env.NODE_ENV='\"production\"' --platform=browser --jsx=automatic --minify=true && copyfiles index.html dist"
   },
   "dependencies": {
     "@google/genai": "^1.7.0",
@@ -20,6 +20,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@vercel/node": "^3.0.22",
+    "copyfiles": "^2.4.1",
     "esbuild": "^0.23.0",
     "typescript": "^5.4.5"
   }
