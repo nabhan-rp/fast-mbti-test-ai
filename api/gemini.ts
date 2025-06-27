@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import type { MbtiResult, QnAStep, QnAHistoryItem } from '../types';
@@ -24,6 +23,9 @@ const robustJsonParse = (jsonString: string) => {
 
 async function processSelfDescription(ai: GoogleGenAI, payload: any): Promise<MbtiResult> {
   const { userInput, languageCode = 'en' } = payload;
+  if (!userInput) {
+      throw new Error("userInput is required for processSelfDescription.");
+  }
   const languageInstruction = `Respond in ${languageCode}. If the user's input is clearly in a different language, prioritize responding in the language of their input.`;
   
   const prompt = `
@@ -79,7 +81,7 @@ function parseQnAStep(responseText: string): QnAStep {
 }
 
 async function startOrContinueQnA(ai: GoogleGenAI, payload: any): Promise<QnAStep> {
-  const { languageCode, initialDescription, history = [] } = payload;
+  const { languageCode = 'en', initialDescription, history = [] } = payload;
   let prompt: string;
 
   const qnaHistoryString = history.map((item: QnAHistoryItem) => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n');
@@ -109,7 +111,7 @@ async function startOrContinueQnA(ai: GoogleGenAI, payload: any): Promise<QnASte
 }
 
 async function getAnalysisFromQnA(ai: GoogleGenAI, payload: any): Promise<MbtiResult> {
-  const { languageCode, initialDescription, history = [] } = payload;
+  const { languageCode = 'en', initialDescription, history = [] } = payload;
   const qnaHistoryString = history.map((item: QnAHistoryItem) => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n');
   const langInstruction = `Generate the entire analysis and all text fields in ${languageCode}. The "language" field in the JSON output must be "${languageCode}".`;
 
@@ -132,8 +134,11 @@ async function getAnalysisFromQnA(ai: GoogleGenAI, payload: any): Promise<MbtiRe
 }
 
 async function getDetailedMbtiExploration(ai: GoogleGenAI, payload: any): Promise<string> {
-  const { mbtiType, personalitySummary, languageCode } = payload;
-  const prompt = `You are an expert MBTI analyst. The user has been identified as ${mbtiType} and has a summary: "${personalitySummary}". Provide a detailed exploration of the ${mbtiType} personality type in ${languageCode}. This should be comprehensive and engaging, suitable for someone wanting to understand themselves better. Include information on: 1. Core characteristics and motivations. 2. Cognitive functions (e.g., for INFP: Fi-Ne-Si-Te) and how they typically manifest. 3. Common strengths in detail. 4. Potential challenges or areas for growth in detail. 5. Typical patterns in relationships (friendships, romantic, family). 6. How they might behave under stress. 7. Suggestions for leveraging their strengths. Format the output as a single string containing well-structured text in ${languageCode}. You can use simple Markdown for formatting (like ## for H2, ### for H3, * for italics/bold, - for lists). Do not output JSON. Just the detailed text content. Make it at least 300-500 words.`;
+  const { mbtiType, personalitySummary, languageCode = 'en' } = payload;
+  if (!mbtiType) {
+    throw new Error("mbtiType is required for getDetailedMbtiExploration.");
+  }
+  const prompt = `You are an expert MBTI analyst. The user has been identified as ${mbtiType} and has a summary: "${personalitySummary || ''}". Provide a detailed exploration of the ${mbtiType} personality type in ${languageCode}. This should be comprehensive and engaging, suitable for someone wanting to understand themselves better. Include information on: 1. Core characteristics and motivations. 2. Cognitive functions (e.g., for INFP: Fi-Ne-Si-Te) and how they typically manifest. 3. Common strengths in detail. 4. Potential challenges or areas for growth in detail. 5. Typical patterns in relationships (friendships, romantic, family). 6. How they might behave under stress. 7. Suggestions for leveraging their strengths. Format the output as a single string containing well-structured text in ${languageCode}. You can use simple Markdown for formatting (like ## for H2, ### for H3, * for italics/bold, - for lists). Do not output JSON. Just the detailed text content. Make it at least 300-500 words.`;
   
   const response: GenerateContentResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TEXT,
@@ -144,8 +149,11 @@ async function getDetailedMbtiExploration(ai: GoogleGenAI, payload: any): Promis
 }
 
 async function getDevelopmentStrategies(ai: GoogleGenAI, payload: any): Promise<string> {
-  const { result, languageCode } = payload;
-  const prompt = `You are a personal development coach specializing in MBTI and holistic growth. The user has the following personality profile (content is in ${result.language || 'unknown language, assume English if not specified, but respond in target language'}): - MBTI Type: ${result.mbtiType} - Personality Summary: ${result.personalitySummary || 'Not available'} - Career Suggestions: ${result.careerSuggestions.join(', ')} - Organizational Roles: ${result.organizationalRoles.join(', ')} - Educational Advice: ${result.educationalAdvice} - Daily Life Tips: ${result.dailyLifeTips} - Hawkins Insight: ${result.hawkinsInsight} - Consciousness Level Prediction: ${result.consciousnessLevelPrediction || 'Not available'} - New Age Concept: ${result.newAgeConcept} - Detailed New Age Suggestions: ${result.detailedNewAgeSuggestions?.join(', ') || 'Not available'}\n\nBased on this complete profile, provide highly personalized and actionable development strategies IN ${languageCode}. Focus on: 1. Leveraging their core ${result.mbtiType} strengths for specific goals. 2. Addressing potential blind spots or challenges typical for ${result.mbtiType}. 3. Practical exercises or reflection prompts related to their Hawkins insight or consciousness level. 4. Ways to integrate their suggested New Age concept or practices more deeply. 5. Tips for developing "untapped potential". The strategies should be empathetic, encouraging, and provide clear steps or ideas, all in ${languageCode}. Format the output as a single string containing well-structured text. You can use simple Markdown for formatting. Do not output JSON. Just the detailed text content. Make it comprehensive, at least 300-500 words.`;
+  const { result, languageCode = 'en' } = payload;
+   if (!result || !result.mbtiType) {
+      throw new Error("A valid result object with an mbtiType is required for getDevelopmentStrategies.");
+  }
+  const prompt = `You are a personal development coach specializing in MBTI and holistic growth. The user has the following personality profile (content is in ${result.language || 'en'}): - MBTI Type: ${result.mbtiType} - Personality Summary: ${result.personalitySummary || 'Not available'} - Career Suggestions: ${result.careerSuggestions.join(', ')} - Organizational Roles: ${result.organizationalRoles.join(', ')} - Educational Advice: ${result.educationalAdvice} - Daily Life Tips: ${result.dailyLifeTips} - Hawkins Insight: ${result.hawkinsInsight} - Consciousness Level Prediction: ${result.consciousnessLevelPrediction || 'Not available'} - New Age Concept: ${result.newAgeConcept} - Detailed New Age Suggestions: ${result.detailedNewAgeSuggestions?.join(', ') || 'Not available'}\n\nBased on this complete profile, provide highly personalized and actionable development strategies IN ${languageCode}. Focus on: 1. Leveraging their core ${result.mbtiType} strengths for specific goals. 2. Addressing potential blind spots or challenges typical for ${result.mbtiType}. 3. Practical exercises or reflection prompts related to their Hawkins insight or consciousness level. 4. Ways to integrate their suggested New Age concept or practices more deeply. 5. Tips for developing "untapped potential". The strategies should be empathetic, encouraging, and provide clear steps or ideas, all in ${languageCode}. Format the output as a single string containing well-structured text. You can use simple Markdown for formatting. Do not output JSON. Just the detailed text content. Make it comprehensive, at least 300-500 words.`;
 
   const response: GenerateContentResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TEXT,
