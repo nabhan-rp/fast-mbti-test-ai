@@ -10,10 +10,22 @@ async function callApi(action: string, payload: any) {
         body: JSON.stringify({ action, payload }),
     });
 
-    const data = await response.json();
+    // We need to handle non-JSON error responses gracefully
+    let data;
+    try {
+        data = await response.json();
+    } catch (e) {
+        // This happens if the server returns HTML (like a 404 page) instead of JSON
+        if (!response.ok) {
+            throw new Error(`The API endpoint is not available (Status: ${response.status}). If running locally, please note this application now uses a backend function which requires a special development server (like 'vercel dev') to run.`);
+        }
+        // If response was OK but JSON parsing failed, that's a different issue.
+        throw new Error("Failed to parse a response from the server. The response was not valid JSON.");
+    }
 
     if (!response.ok) {
-        throw new Error(data.error || `Server responded with status ${response.status}`);
+        // Now we know 'data' is a valid JSON object with an error message from our backend
+        throw new Error(data.error || `The server returned an error (Status: ${response.status}). Check the Vercel logs for more details.`);
     }
 
     return data;

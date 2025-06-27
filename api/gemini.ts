@@ -5,14 +5,6 @@ import type { MbtiResult, QnAStep, QnAHistoryItem } from '../types';
 
 const GEMINI_MODEL_TEXT = "gemini-2.5-flash-preview-04-17";
 
-const getAiClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API_KEY environment variable is not set on the server.");
-  }
-  return new GoogleGenAI({ apiKey });
-};
-
 const robustJsonParse = (jsonString: string) => {
     let cleanJsonString = jsonString.trim();
     const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
@@ -25,7 +17,7 @@ const robustJsonParse = (jsonString: string) => {
         return JSON.parse(cleanJsonString);
     } catch (e) {
         console.error("Failed to parse JSON string:", cleanJsonString);
-        throw new Error("Invalid JSON response from AI.");
+        throw new Error("Invalid JSON response from AI. The format was not as expected.");
     }
 }
 
@@ -37,7 +29,7 @@ async function processSelfDescription(ai: GoogleGenAI, payload: any): Promise<Mb
   const prompt = `
 You are an expert MBTI analyst, career counselor, and personal development coach.
 ${languageInstruction}
-Based on the following self-description, please provide a comprehensive analysis.
+Based on the following self-description, you must provide a comprehensive analysis.
 It is crucial that you understand and interpret abbreviations, slang, or common typos in the user's input before making your analysis.
 
 User's self-description:
@@ -96,13 +88,13 @@ async function startOrContinueQnA(ai: GoogleGenAI, payload: any): Promise<QnASte
   if (history.length === 0) {
     if (initialDescription) {
       langInstruction = `The user wants to interact in ${languageCode}. The user has provided an initial self-description: "${initialDescription}". Generate your first question and all subsequent interactions in ${languageCode}. If the initial description is clearly in a language different from ${languageCode} and ${languageCode} is 'en', you may switch to the language of the initial description for a better user experience, and continue all interactions in that language.`;
-      prompt = `You are an AI assistant facilitating an MBTI and personality assessment. ${langInstruction} Based on this, your goal is to understand the user more deeply through a series of multiple-choice questions. Also gather insights to estimate their general level of consciousness (David Hawkins' Map of Consciousness principles), focusing on typical reactions/interactions. Formulate the first multiple-choice question (3-4 options) that logically follows from their description or explores an interesting aspect. Questions should become progressively more specific. Response JSON: {"question": "...", "choices": ["...", "..."], "isFinal": false}. Do not include any text outside of this JSON object. No markdown.`;
+      prompt = `You are an AI assistant facilitating an MBTI and personality assessment. ${langInstruction} Based on this, your goal is to understand the user more deeply through a series of multiple-choice questions. Also gather insights to estimate their general level of consciousness (David Hawkins' Map of Consciousness principles), focusing on typical reactions/interactions. Formulate the first multiple-choice question (3-4 options) that logically follows from their description or explores an interesting aspect. Questions should become progressively more specific. Response MUST be only JSON: {"question": "...", "choices": ["...", "..."], "isFinal": false}. Do not include any text outside of this JSON object. No markdown.`;
     } else {
-      prompt = `You are an AI assistant for MBTI & personality assessment. ${langInstruction} Goal: Understand user deeply via multiple-choice Q&A. Estimate consciousness level (David Hawkins' Map) based on reactions/interactions. Ask an engaging first question (3-4 multiple choice options). Questions adapt to answers. Response JSON: {"question": "...", "choices": ["...", "..."], "isFinal": false}. Do not include any text outside of this JSON object. No markdown.`;
+      prompt = `You are an AI assistant for MBTI & personality assessment. ${langInstruction} Goal: Understand user deeply via multiple-choice Q&A. Estimate consciousness level (David Hawkins' Map) based on reactions/interactions. Ask an engaging first question (3-4 multiple choice options). Questions adapt to answers. Response MUST be only JSON: {"question": "...", "choices": ["...", "..."], "isFinal": false}. Do not include any text outside of this JSON object. No markdown.`;
     }
   } else {
     const lastEntry = history[history.length - 1];
-    prompt = `You are an AI for MBTI & personality assessment. ${langInstruction} Initial Description (if any): "${initialDescription || 'Not provided'}" Conversation History (in ${languageCode}):\n${qnaHistoryString}\n\nUser just answered "${lastEntry.answer}" to question "${lastEntry.question}". Formulate the next relevant multiple-choice question (3-4 options) in ${languageCode} for MBTI traits and consciousness level. If you have enough information for a full analysis (MBTI, consciousness, detailed New Age advice), set "isFinal" to true and omit "question" and "choices". Otherwise, provide the next question. Response JSON: {"question": "...", "choices": ["...", "..."], "isFinal": boolean} or {"isFinal": true}. Do not include any text outside of this JSON object. No markdown.`;
+    prompt = `You are an AI for MBTI & personality assessment. ${langInstruction} Initial Description (if any): "${initialDescription || 'Not provided'}" Conversation History (in ${languageCode}):\n${qnaHistoryString}\n\nUser just answered "${lastEntry.answer}" to question "${lastEntry.question}". Formulate the next relevant multiple-choice question (3-4 options) in ${languageCode} for MBTI traits and consciousness level. If you have enough information for a full analysis (MBTI, consciousness, detailed New Age advice), set "isFinal" to true and omit "question" and "choices". Otherwise, provide the next question. Response MUST be only JSON: {"question": "...", "choices": ["...", "..."], "isFinal": boolean} or {"isFinal": true}. Do not include any text outside of this JSON object. No markdown.`;
   }
 
   const response: GenerateContentResponse = await ai.models.generateContent({
@@ -169,9 +161,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
+  const { action, payload } = req.body;
+  console.log(`[API] Received action: "${action}"`);
+
   try {
-    const { action, payload } = req.body;
-    const ai = getAiClient();
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      throw new Error("API_KEY environment variable is not set or not accessible on the server.");
+    }
+    const ai = new GoogleGenAI({ apiKey });
+
     let result;
 
     switch (action) {
@@ -191,13 +190,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         result = await getDevelopmentStrategies(ai, payload);
         break;
       default:
-        return res.status(400).json({ error: 'Invalid action' });
+        console.warn(`[API] Invalid action received: "${action}"`);
+        return res.status(400).json({ error: `Invalid action: ${action}` });
     }
     
+    console.log(`[API] Successfully completed action: "${action}"`);
     return res.status(200).json(result);
 
   } catch (error) {
-    console.error(`Error in /api/gemini for action: ${req.body?.action}`, error);
+    console.error(`[API] Error processing action "${action}":`, error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
     return res.status(500).json({ error: errorMessage });
   }
