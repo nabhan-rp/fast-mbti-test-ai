@@ -37,19 +37,8 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
     setQnAStep(null);
     setQnAHistory([]);
   };
-  
-  const checkApiKey = () : boolean => {
-    if (!process.env.API_KEY) {
-      setError("Gemini API Key is not configured. AI features are disabled. Please contact support or check configuration.");
-      setIsLoading(false);
-      resetState(true); 
-      return false;
-    }
-    return true;
-  }
 
   const handleModeSelection = (mode: TestMode) => {
-    if (!checkApiKey()) return;
     resetState(); 
     setCurrentTestMode(mode);
     if (mode === 'description') {
@@ -68,7 +57,6 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
   }
 
   const initiateQnA = async (langCode: string, initialText?: string) => {
-    if (!checkApiKey()) return;
     setIsLoading(true);
     setError(null);
     setQnAHistory([]); 
@@ -87,7 +75,6 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
 
   const handleDescriptionSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!checkApiKey()) return;
     if (!description.trim()) {
       setError('Please describe yourself before submitting.');
       return;
@@ -108,7 +95,6 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
 
   const handleHybridInitialSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!checkApiKey()) return;
     if (!hybridInitialDescription.trim()) {
       setError('Please provide a brief description to start.');
       return;
@@ -117,7 +103,7 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
   };
 
   const handleQnAAnswer = async (answer: string) => {
-    if (!qnaStep || !checkApiKey()) return;
+    if (!qnaStep) return;
 
     const newHistoryItem: QnAHistoryItem = { question: qnaStep.question, answer: answer, choices: qnaStep.choices };
     const updatedHistory = [...qnaHistory, newHistoryItem];

@@ -1,23 +1,18 @@
 {
-  "name": "fitur-export-pdf-of-mbti-personality-insights-ai",
+  "name": "mbti-personality-insights-ai",
+  "version": "1.0.0",
+  "description": "An AI-powered application to discover your MBTI personality type.",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "echo 'No dev script configured. Serve index.html with a static server.'",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.2",
-    "@google/genai": "^1.6.0",
-    "marked": "^12.0.2"
+    "@google/genai": "^1.6.0"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "typescript": "~5.7.2",
-    "vite": "^6.2.0"
+    "@types/node": "^20.12.12",
+    "@vercel/node": "^3.0.22",
+    "typescript": "^5.4.5"
   }
 }

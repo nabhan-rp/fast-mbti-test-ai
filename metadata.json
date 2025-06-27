@@ -1,5 +1,5 @@
 {
-  "name": "Fitur Export PDF of MBTI Personality Insights AI",
+  "name": "Vercel Fitur Export PDF of MBTI Personality Insights AI",
   "description": "An AI-powered application to discover your MBTI personality type, explore suitable career paths, organizational roles, educational directions, and receive personalized self-improvement suggestions based on your self-description. Integrates concepts like David Hawkins' Map of Consciousness and New Age literature for deeper insights. Added 3 feature, export PDF, option to deep learn MBTI, and 3 option to find your personalities.",
   "requestFramePermissions": [],
   "prompt": ""
