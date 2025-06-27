@@ -22,11 +22,13 @@ const robustJsonParse = (jsonString: string) => {
 
 
 async function processSelfDescription(ai: GoogleGenAI, payload: any): Promise<MbtiResult> {
-  const { userInput, languageCode = 'en' } = payload;
-  if (!userInput) {
-      throw new Error("userInput is required for processSelfDescription.");
+  const { userInput, languageCode } = payload;
+  const finalLangCode = languageCode || 'en';
+
+  if (!userInput || typeof userInput !== 'string' || userInput.trim() === '') {
+      throw new Error("userInput is a required string for processSelfDescription.");
   }
-  const languageInstruction = `Respond in ${languageCode}. If the user's input is clearly in a different language, prioritize responding in the language of their input.`;
+  const languageInstruction = `Respond in ${finalLangCode}. If the user's input is clearly in a different language, prioritize responding in the language of their input.`;
   
   const prompt = `
 You are an expert MBTI analyst, career counselor, and personal development coach.
@@ -47,9 +49,9 @@ Please format your response strictly as a JSON object with the following keys an
 - "dailyLifeTips": string
 - "hawkinsInsight": string (David Hawkins' Map of Consciousness insight)
 - "newAgeConcept": string (New Age concept for growth)
-- "language": string (The ISO 639-1 code of the language used for this response, e.g., "${languageCode}")
+- "language": string (The ISO 639-1 code of the language used for this response, e.g., "${finalLangCode}")
 
-Example for "language" field: "language": "${languageCode}"
+Example for "language" field: "language": "${finalLangCode}"
 
 Ensure the entire response is a single, valid JSON object. Do not include any text outside of this JSON object.
 Do not use markdown like \`\`\`json ... \`\`\` around the JSON response.
@@ -81,22 +83,24 @@ function parseQnAStep(responseText: string): QnAStep {
 }
 
 async function startOrContinueQnA(ai: GoogleGenAI, payload: any): Promise<QnAStep> {
-  const { languageCode = 'en', initialDescription, history = [] } = payload;
-  let prompt: string;
+  const { languageCode, initialDescription, history = [] } = payload;
+  const finalLangCode = languageCode || 'en';
+  const initialDescText = initialDescription || '';
 
   const qnaHistoryString = history.map((item: QnAHistoryItem) => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n');
-  let langInstruction = `Generate all questions and interactions in ${languageCode}.`;
+  let langInstruction = `Generate all questions and interactions in ${finalLangCode}.`;
+  let prompt: string;
 
   if (history.length === 0) {
-    if (initialDescription) {
-      langInstruction = `The user wants to interact in ${languageCode}. The user has provided an initial self-description: "${initialDescription}". Generate your first question and all subsequent interactions in ${languageCode}. If the initial description is clearly in a language different from ${languageCode} and ${languageCode} is 'en', you may switch to the language of the initial description for a better user experience, and continue all interactions in that language.`;
+    if (initialDescText) {
+      langInstruction = `The user wants to interact in ${finalLangCode}. The user has provided an initial self-description: "${initialDescText}". Generate your first question and all subsequent interactions in ${finalLangCode}. If the initial description is clearly in a language different from ${finalLangCode} and ${finalLangCode} is 'en', you may switch to the language of the initial description for a better user experience, and continue all interactions in that language.`;
       prompt = `You are an AI assistant facilitating an MBTI and personality assessment. ${langInstruction} Based on this, your goal is to understand the user more deeply through a series of multiple-choice questions. Also gather insights to estimate their general level of consciousness (David Hawkins' Map of Consciousness principles), focusing on typical reactions/interactions. Formulate the first multiple-choice question (3-4 options) that logically follows from their description or explores an interesting aspect. Questions should become progressively more specific. Response MUST be only JSON: {"question": "...", "choices": ["...", "..."], "isFinal": false}. Do not include any text outside of this JSON object. No markdown.`;
     } else {
       prompt = `You are an AI assistant for MBTI & personality assessment. ${langInstruction} Goal: Understand user deeply via multiple-choice Q&A. Estimate consciousness level (David Hawkins' Map) based on reactions/interactions. Ask an engaging first question (3-4 multiple choice options). Questions adapt to answers. Response MUST be only JSON: {"question": "...", "choices": ["...", "..."], "isFinal": false}. Do not include any text outside of this JSON object. No markdown.`;
     }
   } else {
     const lastEntry = history[history.length - 1];
-    prompt = `You are an AI for MBTI & personality assessment. ${langInstruction} Initial Description (if any): "${initialDescription || 'Not provided'}" Conversation History (in ${languageCode}):\n${qnaHistoryString}\n\nUser just answered "${lastEntry.answer}" to question "${lastEntry.question}". Formulate the next relevant multiple-choice question (3-4 options) in ${languageCode} for MBTI traits and consciousness level. If you have enough information for a full analysis (MBTI, consciousness, detailed New Age advice), set "isFinal" to true and omit "question" and "choices". Otherwise, provide the next question. Response MUST be only JSON: {"question": "...", "choices": ["...", "..."], "isFinal": boolean} or {"isFinal": true}. Do not include any text outside of this JSON object. No markdown.`;
+    prompt = `You are an AI for MBTI & personality assessment. ${langInstruction} Initial Description (if any): "${initialDescText || 'Not provided'}" Conversation History (in ${finalLangCode}):\n${qnaHistoryString}\n\nUser just answered "${lastEntry.answer}" to question "${lastEntry.question}". Formulate the next relevant multiple-choice question (3-4 options) in ${finalLangCode} for MBTI traits and consciousness level. If you have enough information for a full analysis (MBTI, consciousness, detailed New Age advice), set "isFinal" to true and omit "question" and "choices". Otherwise, provide the next question. Response MUST be only JSON: {"question": "...", "choices": ["...", "..."], "isFinal": boolean} or {"isFinal": true}. Do not include any text outside of this JSON object. No markdown.`;
   }
 
   const response: GenerateContentResponse = await ai.models.generateContent({
@@ -111,11 +115,13 @@ async function startOrContinueQnA(ai: GoogleGenAI, payload: any): Promise<QnASte
 }
 
 async function getAnalysisFromQnA(ai: GoogleGenAI, payload: any): Promise<MbtiResult> {
-  const { languageCode = 'en', initialDescription, history = [] } = payload;
+  const { languageCode, initialDescription, history = [] } = payload;
+  const finalLangCode = languageCode || 'en';
+  const initialDescText = initialDescription || '';
   const qnaHistoryString = history.map((item: QnAHistoryItem) => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n');
-  const langInstruction = `Generate the entire analysis and all text fields in ${languageCode}. The "language" field in the JSON output must be "${languageCode}".`;
+  const langInstruction = `Generate the entire analysis and all text fields in ${finalLangCode}. The "language" field in the JSON output must be "${finalLangCode}".`;
 
-  const prompt = `You are an expert MBTI analyst, career counselor, and personal development coach. ${langInstruction} The user has completed a Q&A session. User's initial self-description (if provided, language may vary, but your output must be in ${languageCode}): "${initialDescription || 'Not provided'}"\n\nQ&A History (conducted in ${languageCode}):\n${qnaHistoryString}\n\nBased on the initial description (if provided) and the entire Q&A history, provide a comprehensive analysis. Estimate the user's general level of consciousness based on David Hawkins' Map of Consciousness, informed by their responses about daily interactions and emotional patterns. Explain your reasoning briefly. Provide more in-depth and personalized New Age suggestions for this user. Format response strictly as a JSON object with keys: "mbtiType", "personalitySummary", "mbtiExplanation", "careerSuggestions", "organizationalRoles", "educationalAdvice", "dailyLifeTips", "hawkinsInsight", "consciousnessLevelPrediction", "newAgeConcept", "detailedNewAgeSuggestions", "language" (must be "${languageCode}"). Ensure the entire response is a single, valid JSON object. No markdown.`;
+  const prompt = `You are an expert MBTI analyst, career counselor, and personal development coach. ${langInstruction} The user has completed a Q&A session. User's initial self-description (if provided, language may vary, but your output must be in ${finalLangCode}): "${initialDescText || 'Not provided'}"\n\nQ&A History (conducted in ${finalLangCode}):\n${qnaHistoryString}\n\nBased on the initial description (if provided) and the entire Q&A history, provide a comprehensive analysis. Estimate the user's general level of consciousness based on David Hawkins' Map of Consciousness, informed by their responses about daily interactions and emotional patterns. Explain your reasoning briefly. Provide more in-depth and personalized New Age suggestions for this user. Format response strictly as a JSON object with keys: "mbtiType", "personalitySummary", "mbtiExplanation", "careerSuggestions", "organizationalRoles", "educationalAdvice", "dailyLifeTips", "hawkinsInsight", "consciousnessLevelPrediction", "newAgeConcept", "detailedNewAgeSuggestions", "language" (must be "${finalLangCode}"). Ensure the entire response is a single, valid JSON object. No markdown.`;
   
   const response: GenerateContentResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TEXT,
@@ -134,11 +140,13 @@ async function getAnalysisFromQnA(ai: GoogleGenAI, payload: any): Promise<MbtiRe
 }
 
 async function getDetailedMbtiExploration(ai: GoogleGenAI, payload: any): Promise<string> {
-  const { mbtiType, personalitySummary, languageCode = 'en' } = payload;
-  if (!mbtiType) {
-    throw new Error("mbtiType is required for getDetailedMbtiExploration.");
+  const { mbtiType, personalitySummary, languageCode } = payload;
+  const finalLangCode = languageCode || 'en';
+  if (!mbtiType || typeof mbtiType !== 'string') {
+    throw new Error("mbtiType is a required string for getDetailedMbtiExploration.");
   }
-  const prompt = `You are an expert MBTI analyst. The user has been identified as ${mbtiType} and has a summary: "${personalitySummary || ''}". Provide a detailed exploration of the ${mbtiType} personality type in ${languageCode}. This should be comprehensive and engaging, suitable for someone wanting to understand themselves better. Include information on: 1. Core characteristics and motivations. 2. Cognitive functions (e.g., for INFP: Fi-Ne-Si-Te) and how they typically manifest. 3. Common strengths in detail. 4. Potential challenges or areas for growth in detail. 5. Typical patterns in relationships (friendships, romantic, family). 6. How they might behave under stress. 7. Suggestions for leveraging their strengths. Format the output as a single string containing well-structured text in ${languageCode}. You can use simple Markdown for formatting (like ## for H2, ### for H3, * for italics/bold, - for lists). Do not output JSON. Just the detailed text content. Make it at least 300-500 words.`;
+  const summaryText = personalitySummary || '';
+  const prompt = `You are an expert MBTI analyst. The user has been identified as ${mbtiType} and has a summary: "${summaryText}". Provide a detailed exploration of the ${mbtiType} personality type in ${finalLangCode}. This should be comprehensive and engaging, suitable for someone wanting to understand themselves better. Include information on: 1. Core characteristics and motivations. 2. Cognitive functions (e.g., for INFP: Fi-Ne-Si-Te) and how they typically manifest. 3. Common strengths in detail. 4. Potential challenges or areas for growth in detail. 5. Typical patterns in relationships (friendships, romantic, family). 6. How they might behave under stress. 7. Suggestions for leveraging their strengths. Format the output as a single string containing well-structured text in ${finalLangCode}. You can use simple Markdown for formatting (like ## for H2, ### for H3, * for italics/bold, - for lists). Do not output JSON. Just the detailed text content. Make it at least 300-500 words.`;
   
   const response: GenerateContentResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TEXT,
@@ -149,11 +157,24 @@ async function getDetailedMbtiExploration(ai: GoogleGenAI, payload: any): Promis
 }
 
 async function getDevelopmentStrategies(ai: GoogleGenAI, payload: any): Promise<string> {
-  const { result, languageCode = 'en' } = payload;
+  const { result, languageCode } = payload;
+  const finalLangCode = languageCode || 'en';
    if (!result || !result.mbtiType) {
       throw new Error("A valid result object with an mbtiType is required for getDevelopmentStrategies.");
   }
-  const prompt = `You are a personal development coach specializing in MBTI and holistic growth. The user has the following personality profile (content is in ${result.language || 'en'}): - MBTI Type: ${result.mbtiType} - Personality Summary: ${result.personalitySummary || 'Not available'} - Career Suggestions: ${result.careerSuggestions.join(', ')} - Organizational Roles: ${result.organizationalRoles.join(', ')} - Educational Advice: ${result.educationalAdvice} - Daily Life Tips: ${result.dailyLifeTips} - Hawkins Insight: ${result.hawkinsInsight} - Consciousness Level Prediction: ${result.consciousnessLevelPrediction || 'Not available'} - New Age Concept: ${result.newAgeConcept} - Detailed New Age Suggestions: ${result.detailedNewAgeSuggestions?.join(', ') || 'Not available'}\n\nBased on this complete profile, provide highly personalized and actionable development strategies IN ${languageCode}. Focus on: 1. Leveraging their core ${result.mbtiType} strengths for specific goals. 2. Addressing potential blind spots or challenges typical for ${result.mbtiType}. 3. Practical exercises or reflection prompts related to their Hawkins insight or consciousness level. 4. Ways to integrate their suggested New Age concept or practices more deeply. 5. Tips for developing "untapped potential". The strategies should be empathetic, encouraging, and provide clear steps or ideas, all in ${languageCode}. Format the output as a single string containing well-structured text. You can use simple Markdown for formatting. Do not output JSON. Just the detailed text content. Make it comprehensive, at least 300-500 words.`;
+  const prompt = `You are a personal development coach specializing in MBTI and holistic growth. The user has the following personality profile (content is in ${result.language || 'en'}): 
+- MBTI Type: ${result.mbtiType}
+- Personality Summary: ${result.personalitySummary || 'Not available'}
+- Career Suggestions: ${(result.careerSuggestions || []).join(', ') || 'Not available'}
+- Organizational Roles: ${(result.organizationalRoles || []).join(', ') || 'Not available'}
+- Educational Advice: ${result.educationalAdvice || 'Not available'}
+- Daily Life Tips: ${result.dailyLifeTips || 'Not available'}
+- Hawkins Insight: ${result.hawkinsInsight || 'Not available'}
+- Consciousness Level Prediction: ${result.consciousnessLevelPrediction || 'Not available'}
+- New Age Concept: ${result.newAgeConcept || 'Not available'}
+- Detailed New Age Suggestions: ${(result.detailedNewAgeSuggestions || []).join(', ') || 'Not available'}
+
+Based on this complete profile, provide highly personalized and actionable development strategies IN ${finalLangCode}. Focus on: 1. Leveraging their core ${result.mbtiType} strengths for specific goals. 2. Addressing potential blind spots or challenges typical for ${result.mbtiType}. 3. Practical exercises or reflection prompts related to their Hawkins insight or consciousness level. 4. Ways to integrate their suggested New Age concept or practices more deeply. 5. Tips for developing "untapped potential". The strategies should be empathetic, encouraging, and provide clear steps or ideas, all in ${finalLangCode}. Format the output as a single string containing well-structured text. You can use simple Markdown for formatting. Do not output JSON. Just the detailed text content. Make it comprehensive, at least 300-500 words.`;
 
   const response: GenerateContentResponse = await ai.models.generateContent({
     model: GEMINI_MODEL_TEXT,
