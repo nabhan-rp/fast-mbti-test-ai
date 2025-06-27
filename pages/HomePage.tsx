@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MbtiResult, QnAStep, QnAHistoryItem, Language } from '../types';
@@ -12,6 +13,9 @@ interface HomePageProps {
 
 type TestMode = 'description' | 'qna' | 'hybrid';
 type ViewState = 'selection' | 'descriptionInput' | 'hybridInput' | 'qnaLanguageSelection' | 'qnaInProgress' | 'finalizing';
+
+const QNA_SOFT_LIMIT = 25; // At this point, we encourage the AI to finish
+const QNA_HARD_LIMIT = 35; // At this point, we force the AI to finish
 
 const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
   const [description, setDescription] = useState('');
@@ -73,7 +77,7 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
     setError(null);
     setQnAHistory([]); 
     try {
-      const firstStep = await startOrContinueQnA(langCode, initialText, []);
+      const firstStep = await startOrContinueQnA(langCode, initialText, [], false);
       setQnAStep(firstStep);
       setViewState('qnaInProgress');
     } catch (err) {
@@ -126,11 +130,34 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
     setIsLoading(true);
     setError(null);
 
+    // Hard limit fail-safe
+    if (updatedHistory.length >= QNA_HARD_LIMIT) {
+      try {
+        setViewState('finalizing');
+        const finalResult = await getAnalysisFromQnA(
+          selectedLanguage, 
+          currentTestMode === 'hybrid' ? hybridInitialDescription : undefined,
+          updatedHistory
+        );
+        setLatestResult(finalResult); 
+        navigate('/results');
+      } catch (err) {
+         console.error("Error in Q&A step (at hard limit):", err);
+         setError(err instanceof Error ? err.message : 'An error occurred during final analysis. Please try again or restart.');
+      } finally {
+          setIsLoading(false);
+      }
+      return; // Stop execution here
+    }
+    
+    const isPastSoftLimit = updatedHistory.length >= QNA_SOFT_LIMIT;
+
     try {
       const nextStep = await startOrContinueQnA(
         selectedLanguage, 
         currentTestMode === 'hybrid' ? hybridInitialDescription : undefined,
-        updatedHistory
+        updatedHistory,
+        isPastSoftLimit
       );
       setQnAStep(nextStep);
       if (nextStep.isFinal) {
@@ -314,7 +341,8 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
     if (!qnaStep) {
         return <p className="text-center text-content-muted">Preparing questions...</p>;
     }
-    const progress = qnaHistory.length > 0 ? Math.min(95, (qnaHistory.length / 10) * 100) : 5; 
+    const progress = qnaHistory.length > 0 ? Math.min(98, (qnaHistory.length / QNA_HARD_LIMIT) * 100) : 2; 
+    const isPastSoft = qnaHistory.length >= QNA_SOFT_LIMIT;
 
     return (
       <section className="glassmorphism p-6 sm:p-10 rounded-xl shadow-xl animate-fade-in space-y-8 max-w-2xl mx-auto">
@@ -323,7 +351,13 @@ const HomePage: React.FC<HomePageProps> = ({ setLatestResult }) => {
             <div className="w-full bg-neutral/30 rounded-full h-3 mb-2">
                 <div className="bg-gradient-to-r from-pink-500 to-primary h-3 rounded-full transition-all duration-500" style={{width: `${progress}%`}}></div>
             </div>
-            <p className="text-sm text-content-muted text-center mb-6">Question {qnaHistory.length + 1} (in {SUPPORTED_LANGUAGES.find(l=>l.code === selectedLanguage)?.name || selectedLanguage})</p>
+            <p className="text-sm text-content-muted text-center mb-6">
+                Question {qnaHistory.length + 1} | 
+                {isPastSoft 
+                    ? <span className="text-accent font-semibold"> Finalizing analysis...</span> 
+                    : ` Est. ~15 questions (Max ${QNA_HARD_LIMIT})`
+                } | Language: {SUPPORTED_LANGUAGES.find(l=>l.code === selectedLanguage)?.name || selectedLanguage}
+            </p>
         </div>
         <h2 className="text-2xl font-display font-semibold text-content mb-6 text-center">{qnaStep.question}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

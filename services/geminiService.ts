@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { MbtiResult, QnAStep, QnAHistoryItem } from '../types';
 import { GEMINI_MODEL_TEXT } from '../constants';
@@ -26,22 +25,23 @@ User's self-description:
 "${userInput}"
 
 Please format your response strictly as a JSON object with the following structure and value types:
-- "mbtiType": string (e.g., "INTJ", "ESFP")
+- "mbtiType": string (e.g., "INTJ")
 - "identity": string ("A" for Assertive or "T" for Turbulent)
-- "dichotomyPercentages": object with keys "I", "E", "N", "S", "T", "F", "J", "P", and integer values from 0-100, where I+E=100, N+S=100, etc. (e.g., { "I": 70, "E": 30, ... })
+- "dichotomyPercentages": object with keys "I", "E", "N", "S", "T", "F", "J", "P", and integer values from 0-100, where I+E=100, N+S=100, etc.
 - "personalitySummary": string (1-2 sentences)
 - "mbtiExplanation": string (2-3 sentences explaining the type and A/T identity)
-- "careerSuggestions": array of strings (3-5 detailed suggestions)
-- "organizationalRoles": array of strings (2-3 detailed suggestions)
+- "careerSuggestions": array of strings (IMPORTANT: MUST be a valid JSON array like ["item 1", "item 2"])
+- "organizationalRoles": array of strings (IMPORTANT: MUST be a valid JSON array)
 - "educationalAdvice": string
 - "dailyLifeTips": string
-- "hawkinsInsight": string (A detailed David Hawkins' Map of Consciousness insight, linking their potential LoC to their described behaviors.)
+- "hawkinsInsight": string (A detailed David Hawkins' Map of Consciousness insight)
 - "consciousnessLevelPrediction": string (e.g., "Operates at Reason (400), exploring Love (500). Justification: ...")
 - "newAgeConcept": string (New Age concept for growth)
-- "detailedNewAgeSuggestions": array of strings (2-3 actionable tips to raise their LoC)
+- "detailedNewAgeSuggestions": array of strings (IMPORTANT: MUST be a valid JSON array)
 - "language": string (The ISO 639-1 code of the language used for this response, e.g., "${languageCode}")
 
-Example for "language" field: "language": "${languageCode}"
+CRITICAL JSON RULE: For all fields that are arrays of strings (like careerSuggestions, organizationalRoles, detailedNewAgeSuggestions), the format MUST be ["string one", "string two", "string three"]. A comma is REQUIRED between each quoted string element. Do NOT forget the commas.
+
 Example for dichotomyPercentages: { "I": 20, "E": 80, "N": 70, "S": 30, "T": 40, "F": 60, "J": 85, "P": 15 }
 
 Ensure the entire response is a single, valid JSON object. Do not include any text outside of this JSON object.
@@ -86,12 +86,14 @@ const parseQnAResponse = (responseText: string): QnAStep => {
     return parsed as QnAStep;
 }
 
-export const startOrContinueQnA = async (languageCode: string, initialDescription?: string, history: QnAHistoryItem[] = []): Promise<QnAStep> => {
+export const startOrContinueQnA = async (languageCode: string, initialDescription?: string, history: QnAHistoryItem[] = [], isPastSoftLimit: boolean = false): Promise<QnAStep> => {
   const ai = getAiClient();
   let prompt: string;
 
   const qnaHistoryString = history.map(item => `Q: ${item.question}\nA: ${item.answer}`).join('\n\n');
-  let langInstruction = `Generate all questions and interactions in ${languageCode}.`;
+  
+  // Strengthened language instruction to be a direct command
+  let langInstruction = `You MUST generate all text content (questions, choices) in the language specified by this code: ${languageCode}. Your entire JSON response, including the string values for "question" and "choices", must be in this language. Do not deviate.`;
 
   const coreGoal = `Your goal is to deeply understand the user to determine their:
 1. MBTI type (I/E, N/S, T/F, J/P).
@@ -102,7 +104,8 @@ The questions should be engaging, multiple-choice (3-4 options), and adapt based
 
   if (history.length === 0) { // First question
     if (initialDescription) { // Hybrid mode
-      langInstruction = `The user wants to interact in ${languageCode}. The user has provided an initial self-description: "${initialDescription}". Generate your first question and all subsequent interactions in ${languageCode}. If the initial description is clearly in a language different from ${languageCode} and ${languageCode} is 'en', you may switch to the language of the initial description for a better user experience, and continue all interactions in that language.`;
+      // This language instruction allows for flexibility in hybrid mode start
+      langInstruction = `The user wants to interact in ${languageCode}. The user has provided an initial self-description: "${initialDescription}". Generate your first question and all subsequent interactions in ${languageCode}. If the initial description is clearly in a language different from ${languageCode} and ${languageCode} is 'en', you MAY switch to the language of the initial description for a better user experience, and continue all interactions in that language.`;
 
       prompt = `You are an AI assistant for a deep personality assessment.
 ${langInstruction}
@@ -114,22 +117,28 @@ No markdown.`;
       prompt = `You are an AI assistant for a deep personality assessment.
 ${langInstruction}
 ${coreGoal}
-Start with an engaging first question to begin the assessment.
+Start with an engaging first question to begin the assessment. The question and choices MUST be in ${languageCode}.
 Response JSON: {"question": "...", "choices": ["...", "..."], "isFinal": false}
 No markdown.`;
     }
   } else { // Subsequent questions
     const lastEntry = history[history.length -1];
+    
+    let finalizationInstruction = `If you have sufficient information for a full, detailed analysis on all points (MBTI, A/T, LoC), set "isFinal" to true. Otherwise, provide the next question.`;
+    if (isPastSoftLimit) {
+        finalizationInstruction = `You have reached the 25-question soft limit. It is now strongly preferred that you finalize the analysis. Use the rich data you have collected to make your best, most complete assessment and set "isFinal" to true. Only ask one more question if there is a CRITICAL contradiction that you MUST resolve to provide a meaningful result.`;
+    }
+
     prompt = `You are an AI for a deep personality assessment.
 ${langInstruction}
 ${coreGoal}
 Initial Description (if any): "${initialDescription || 'Not provided'}"
-Conversation History (in ${languageCode}):
+Conversation History:
 ${qnaHistoryString}
 
-User just answered "${lastEntry.answer}" to question "${lastEntry.question}".
-Formulate the next relevant multiple-choice question in ${languageCode}.
-If you have sufficient information for a full, detailed analysis on all points (MBTI, A/T, LoC), set "isFinal" to true. Otherwise, provide the next question.
+The user just answered "${lastEntry.answer}" to question "${lastEntry.question}".
+Formulate the next relevant multiple-choice question. The question and choices MUST be in ${languageCode}.
+${finalizationInstruction}
 Response JSON: {"question": "...", "choices": ["...", "..."], "isFinal": boolean} or {"isFinal": true}
 No markdown.`;
   }
@@ -162,7 +171,7 @@ ${langInstruction}
 The user has completed a Q&A session.
 User's initial self-description (if provided): "${initialDescription || 'Not provided'}"
 
-Q&A History (conducted in ${languageCode}):
+Q&A History:
 ${qnaHistoryString}
 
 Based on the initial description (if provided) and the entire Q&A history, provide a comprehensive analysis.
@@ -175,18 +184,20 @@ Career/Org roles should be more detailed.
 Format response strictly as a JSON object with keys:
 - "mbtiType": string
 - "identity": string ("A" for Assertive or "T" for Turbulent)
-- "dichotomyPercentages": object with keys "I", "E", "N", "S", "T", "F", "J", "P", and integer values from 0-100, where I+E=100, N+S=100, etc.
-- "personalitySummary": string (concise summary from Q&A)
-- "mbtiExplanation": string (MBTI and A/T fit from Q&A)
-- "careerSuggestions": array of strings (3-5 detailed suggestions)
-- "organizationalRoles": array of strings (2-3 detailed suggestions)
+- "dichotomyPercentages": object with keys "I", "E", "N", "S", "T", "F", "J", "P", and integer values from 0-100 where I+E=100, N+S=100, etc.
+- "personalitySummary": string
+- "mbtiExplanation": string
+- "careerSuggestions": array of strings (IMPORTANT: MUST be a valid JSON array like ["item 1", "item 2"])
+- "organizationalRoles": array of strings (IMPORTANT: MUST be a valid JSON array)
 - "educationalAdvice": string
 - "dailyLifeTips": string
-- "hawkinsInsight": string (A detailed David Hawkins' Map of Consciousness insight, linking their potential LoC to their described behaviors.)
-- "consciousnessLevelPrediction": string (e.g., "Operates at Reason (400), exploring Love (500). Justification: ...")
-- "newAgeConcept": string (primary New Age concept)
-- "detailedNewAgeSuggestions": array of strings (2-3 actionable tips to raise their LoC)
+- "hawkinsInsight": string
+- "consciousnessLevelPrediction": string
+- "newAgeConcept": string
+- "detailedNewAgeSuggestions": array of strings (IMPORTANT: MUST be a valid JSON array)
 - "language": string (The ISO 639-1 code of the language used for this response, MUST BE "${languageCode}")
+
+CRITICAL JSON RULE: For all fields that are arrays of strings (like careerSuggestions, organizationalRoles, detailedNewAgeSuggestions), the format MUST be ["string one", "string two", "string three"]. A comma is REQUIRED between each quoted string element. Do NOT forget the commas.
 
 Ensure the entire response is a single, valid JSON object. No markdown.
 `;
@@ -224,7 +235,8 @@ export const getDetailedMbtiExploration = async (mbtiType: string, personalitySu
   const prompt = `
 You are an expert MBTI analyst.
 The user has been identified as ${mbtiType} and has a summary: "${personalitySummary}".
-Provide a detailed exploration of the ${mbtiType} personality type in ${languageCode}.
+Your entire response string MUST be in ${languageCode}.
+Provide a detailed exploration of the ${mbtiType} personality type.
 This should be comprehensive and engaging, suitable for someone wanting to understand themselves better.
 Include information on:
 1.  Core characteristics and motivations.
@@ -235,7 +247,7 @@ Include information on:
 6.  How they might behave under stress.
 7.  Suggestions for leveraging their strengths.
 
-Format the output as a single string containing well-structured text in ${languageCode}. You can use simple Markdown for formatting (like ## for H2, ### for H3, * for italics/bold, - for lists).
+Format the output as a single string containing well-structured text. You can use simple Markdown for formatting (like ## for H2, ### for H3, * for italics/bold, - for lists).
 Do not output JSON. Just the detailed text content.
 Make it at least 300-500 words.
 `;
@@ -259,6 +271,7 @@ export const getDevelopmentStrategies = async (result: MbtiResult, languageCode:
   const ai = getAiClient();
   const prompt = `
 You are a personal development coach specializing in MBTI and holistic growth.
+Your entire response string MUST be in ${languageCode}.
 The user has the following personality profile (content is in ${result.language || 'unknown language, assume English if not specified, but respond in target language'}):
 - MBTI Type: ${result.mbtiType}-${result.identity}
 - Dichotomy Percentages: I/E: ${result.dichotomyPercentages.I}/${result.dichotomyPercentages.E}, N/S: ${result.dichotomyPercentages.N}/${result.dichotomyPercentages.S}, T/F: ${result.dichotomyPercentages.T}/${result.dichotomyPercentages.F}, J/P: ${result.dichotomyPercentages.J}/${result.dichotomyPercentages.P}
@@ -272,7 +285,7 @@ The user has the following personality profile (content is in ${result.language 
 - New Age Concept: ${result.newAgeConcept}
 - Detailed New Age Suggestions: ${result.detailedNewAgeSuggestions?.join(', ') || 'Not available'}
 
-Based on this complete profile, provide highly personalized and actionable development strategies IN ${languageCode}.
+Based on this complete profile, provide highly personalized and actionable development strategies.
 Focus on:
 1.  Leveraging their core ${result.mbtiType} strengths, considering their ${result.identity} identity (e.g., how an ENFJ-A leads vs an ENFJ-T).
 2.  Addressing blind spots, especially those common for their -${result.identity} variant.
@@ -280,7 +293,7 @@ Focus on:
 4.  Ways to integrate their suggested New Age concept more deeply to foster growth.
 5.  Tips for developing "untapped potential" by balancing their dichotomies (e.g., if highly Extraverted, suggest ways to develop their Introverted side).
 
-The strategies should be empathetic, encouraging, and provide clear steps or ideas, all in ${languageCode}.
+The strategies should be empathetic, encouraging, and provide clear steps or ideas.
 Format the output as a single string containing well-structured text. You can use simple Markdown for formatting.
 Do not output JSON. Just the detailed text content.
 Make it comprehensive, at least 300-500 words.
