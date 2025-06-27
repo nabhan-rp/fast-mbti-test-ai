@@ -239,16 +239,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
   };
 
   const handlePrintSelectedResult = async () => {
-    if (!selectedResultForFeed) return;
+    if (!selectedResultForFeed || !printableDashboardContentRef.current) return;
 
     document.body.classList.add('print-active-page');
-    const mainContentArea = printableDashboardContentRef.current; // Use a ref for the printable area
-    if (mainContentArea) {
-        mainContentArea.classList.add('printable-content-area'); // Add class to target for print
-    }
 
-
-    // Logic to include detailed exploration and strategies if available
     const explorationContent = selectedResultForFeed.detailedMbtiExploration ? await marked.parse(selectedResultForFeed.detailedMbtiExploration) : null;
     const strategiesContent = selectedResultForFeed.developmentStrategies ? await marked.parse(selectedResultForFeed.developmentStrategies) : null;
 
@@ -259,7 +253,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
     if (explorationContent || strategiesContent) {
         tempDetailsContainer = document.createElement('div');
         tempDetailsContainer.id = tempDetailsContainerId;
-        tempDetailsContainer.className = 'print-only'; // This class makes it visible for print
+        tempDetailsContainer.className = 'print-only';
 
         let htmlToInject = '';
         if (explorationContent) {
@@ -270,15 +264,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
         }
         tempDetailsContainer.innerHTML = htmlToInject;
         
-        // Append to the section displaying the selected result's summary.
-        // This requires the parent div of the "Selected Report" section to be the printable area.
         const selectedReportSection = document.getElementById('selected-report-printable-section');
         if (selectedReportSection) {
             selectedReportSection.appendChild(tempDetailsContainer);
-        } else if (mainContentArea) {
-            mainContentArea.appendChild(tempDetailsContainer); // Fallback
         } else {
-            document.body.appendChild(tempDetailsContainer); // Last resort
+           printableDashboardContentRef.current.appendChild(tempDetailsContainer); 
         }
     }
     
@@ -287,9 +277,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
             tempDetailsContainer.parentNode.removeChild(tempDetailsContainer);
         }
         document.body.classList.remove('print-active-page');
-        if (mainContentArea) {
-            mainContentArea.classList.remove('printable-content-area');
-        }
         window.removeEventListener('afterprint', onAfterPrint);
     };
     window.addEventListener('afterprint', onAfterPrint);
@@ -308,7 +295,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
   }
 
   return (
-    <div className="space-y-12 animate-fade-in pb-12" ref={printableDashboardContentRef}>
+    <div className="space-y-12 animate-fade-in pb-12 printable-content-area" ref={printableDashboardContentRef}>
       <section className="bg-gradient-to-br from-primary/30 via-bground to-bground/80 rounded-xl shadow-2xl p-8 text-center no-print">
         <SparklesIcon className="w-16 h-16 text-accent mx-auto mb-4 animate-ping opacity-75"/>
         <h1 className="text-4xl lg:text-5xl font-display font-bold mb-2 text-shadow-accent-glow">Welcome, {currentUser.displayName || currentUser.email}!</h1>
@@ -364,7 +351,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
                     </button>
                 </div>
                  {/* This div is for print-only header matching ResultsPage */}
-                <div className="print-only text-center py-2 border-b border-neutral/30 mb-4">
+                <div className="print-only report-header text-center">
                     <h1 className="text-2xl font-display font-bold mb-1">Personality Report: {selectedResultForFeed.mbtiType}</h1>
                     <p className="text-lg font-semibold">{selectedResultForFeed.mbtiType} - {selectedResultForFeed.personalitySummary || selectedResultForFeed.mbtiExplanation || 'N/A'}</p>
                     {selectedResultForFeed.language && <p className="text-xs text-content-muted mt-1">(Results Language: {SUPPORTED_LANGUAGES.find(l => l.code === selectedResultForFeed.language)?.name || selectedResultForFeed.language})</p>}
@@ -378,7 +365,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ latestResult }) => {
           )}
         </aside>
 
-        <main className="lg:col-span-2 space-y-6 no-print">
+        <main className="lg:col-span-2 space-y-6">
           <div className="glassmorphism p-6 rounded-xl shadow-xl border border-neutral/20">
             <h2 className="text-2xl font-display font-semibold mb-6 text-primary flex items-center">
                 <SparklesIcon className="w-8 h-8 mr-2 text-accent animate-pulse"/> Personalized Growth Feed
@@ -456,8 +443,8 @@ const FeedItemCard: React.FC<FeedItemCardProps> = ({ item, onActionClick }) => {
       : <span className="mt-auto text-sm text-content-muted self-start">{item.actionText}</span>
     )}
   </div>
-);
-}
+  );
+};
 
 
 interface ModalProps {
@@ -506,7 +493,7 @@ const DetailedContentModal: React.FC<ModalProps> = ({
 
   return (
     <div 
-        className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-fade-in no-print" 
+        className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-fade-in modal-print-host" 
         onClick={onClose} 
         role="dialog" 
         aria-modal="true" 
@@ -516,7 +503,7 @@ const DetailedContentModal: React.FC<ModalProps> = ({
         className="bg-bground-light p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col animate-slide-up border border-neutral/30" 
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-4 pb-4 border-b border-neutral/30">
+        <div className="flex justify-between items-center mb-4 pb-4 border-b border-neutral/30 no-print">
           <h2 id="modal-title" className="text-2xl font-display font-bold text-primary">{title}</h2>
           <button 
             onClick={onClose}
@@ -531,7 +518,7 @@ const DetailedContentModal: React.FC<ModalProps> = ({
             children
           )}
         </div>
-        <div className="mt-6 flex justify-between items-center pt-4 border-t border-neutral/30">
+        <div className="mt-6 flex justify-between items-center pt-4 border-t border-neutral/30 no-print">
             <div>
                 {copySuccessMessage && <span className="text-sm text-accent mr-4">{copySuccessMessage}</span>}
             </div>

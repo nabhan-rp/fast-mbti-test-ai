@@ -185,128 +185,99 @@
       display: none;
     }
 
-    /* Print specific styles */
+    /* --- REVISED PRINT STYLES --- */
     @media print {
       body {
         background-color: white !important;
         color: black !important;
-        -webkit-print-color-adjust: exact; /* Chrome, Safari, Edge */
-        color-adjust: exact; /* Firefox */
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+        font-family: 'Inter', sans-serif;
+        margin: 1cm;
+      }
+
+      /* General rules */
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      a { text-decoration: underline !important; color: blue !important; }
+
+      /* Universal reset for print content */
+      .printable-content-area *, #modal-print-wrapper * {
+        color: black !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        border-color: #ddd !important;
+      }
+
+      .printable-content-area .glassmorphism, 
+      .printable-content-area .bg-bground-light,
+      #modal-print-wrapper .bg-bground-light {
+        background-color: #fff !important;
+        border: 1px solid #ddd !important;
+        backdrop-filter: none !important;
+        padding: 1rem;
+        margin-bottom: 1rem;
       }
       
-      .no-print {
-        display: none !important;
-      }
-
-      .print-only {
-        display: block !important; /* Makes it visible for print, overriding the screen style */
-        visibility: visible !important;
-        margin-top: 1.5rem;
+      .printable-content-area .report-header {
+        background-color: #f9f9f9 !important;
         padding: 1rem;
-        border: 1px solid #ccc;
-        border-radius: 0.5rem;
-        background-color: #f9f9f9 !important; /* Light background for print-only sections */
-      }
-      .print-only h2, .print-only h3 {
-        color: black !important;
-        font-family: 'Playfair Display', serif;
-      }
-      .print-only .prose p, .print-only .prose li, .print-only .prose div {
-        color: #333 !important;
-      }
-       .print-only .prose strong {
-        color: black !important;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #ddd;
       }
 
-      /* Styles for printing the main content area (ResultsPage, DashboardPage) */
-      body.print-active-page > header.no-print, 
-      body.print-active-page > nav.no-print, 
-      body.print-active-page > footer.no-print,
-      body.print-active-page .action-buttons-container.no-print { /* Container for action buttons */
-        display: none !important;
-      }
-
-      body.print-active-page .printable-content-area {
-        visibility: visible !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 1rem !important; /* Add some padding for the overall print */
-        box-shadow: none !important;
-        border: none !important;
-        position: static !important;
-      }
-      body.print-active-page .printable-content-area * {
-        visibility: visible !important;
-        color: black !important; /* Default text to black for print */
-      }
-      /* Ensure prose styles translate to print */
-       body.print-active-page .printable-content-area .prose,
-       body.print-active-page .printable-content-area .prose h1,
-       body.print-active-page .printable-content-area .prose h2,
-       body.print-active-page .printable-content-area .prose h3,
-       body.print-active-page .printable-content-area .prose h4,
-       body.print-active-page .printable-content-area .prose strong {
-          color: black !important;
-       }
-       body.print-active-page .printable-content-area .prose p,
-       body.print-active-page .printable-content-area .prose li {
-          color: #222 !important; /* Darker gray for readability */
-       }
-       body.print-active-page .printable-content-area .prose a {
-          color: #007bff !important; /* Standard blue for links in print */
-          text-decoration: underline !important;
-       }
-        body.print-active-page .printable-content-area .glassmorphism { /* Remove glassmorphism for print */
-            background: white !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            border: 1px solid #ddd !important;
-        }
-        body.print-active-page .printable-content-area .text-content,
-        body.print-active-page .printable-content-area .text-content-muted,
-        body.print-active-page .printable-content-area .text-primary,
-        body.print-active-page .printable-content-area .text-secondary,
-        body.print-active-page .printable-content-area .text-accent {
-            color: black !important; /* Override specific text colors for print */
-        }
-        body.print-active-page .printable-content-area .bg-bground-light {
-            background-color: #f0f0f0 !important; /* Lighten dark backgrounds */
-        }
-
-
-      /* Styles for printing modal content */
-      body.print-active-modal > *:not(#modal-print-wrapper) {
-        display: none !important;
-      }
-      body.print-active-modal #modal-print-wrapper {
+      /* Fix for grid layouts not printing columns correctly */
+      .printable-content-area .grid {
         display: block !important;
-        visibility: visible !important;
-        position: absolute !important;
-        left: 0;
-        top: 0;
-        width: 100% !important;
-        height: auto !important;
-        overflow: visible !important;
-        background-color: white !important;
-        color: black !important;
-        padding: 20px !important;
-        border: none !important;
-        box-shadow: none !important;
       }
-      body.print-active-modal #modal-print-wrapper * {
-        visibility: visible !important;
-        color: black !important;
+
+      /* Page printing logic: Isolate the main printable container */
+      body.print-active-page #root > nav, 
+      body.print-active-page #root > footer {
+        display: none !important;
       }
-       body.print-active-modal #modal-print-wrapper .prose h1,
-       body.print-active-modal #modal-print-wrapper .prose h2,
-       body.print-active-modal #modal-print-wrapper .prose h3,
-       body.print-active-modal #modal-print-wrapper .prose strong {
-         color: black !important;
-       }
-        body.print-active-modal #modal-print-wrapper .prose p,
-        body.print-active-modal #modal-print-wrapper .prose li {
-            color: #333 !important;
-        }
+      body.print-active-page #root > main > *:not(.printable-content-area) {
+        display: none !important;
+      }
+
+      /* Modal printing logic: Isolate the modal */
+      body.print-active-modal {
+          margin: 0; /* Reset body margin for modal print */
+      }
+      body.print-active-modal .no-print {
+          display: none !important; /* Redundant but safe */
+      }
+      body.print-active-modal #root > nav, 
+      body.print-active-modal #root > footer,
+      body.print-active-modal .printable-content-area > *:not(.modal-print-host) {
+        display: none !important;
+      }
+      
+      body.print-active-modal .modal-print-host {
+          position: static !important;
+          padding: 0 !important;
+          background-color: transparent !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          border: none !important;
+          box-shadow: none !important;
+      }
+      
+      body.print-active-modal .modal-print-host > div { /* The inner modal structure div */
+          position: static !important;
+          display: block !important;
+          max-height: none !important;
+          box-shadow: none !important;
+          border: none !important;
+          padding: 0 !important;
+      }
+
+      body.print-active-modal #modal-print-wrapper {
+          padding: 1rem !important;
+          overflow: visible !important;
+          max-height: none !important;
+      }
     }
 
   </style>

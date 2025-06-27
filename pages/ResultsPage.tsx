@@ -105,14 +105,9 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
   };
   
   const handlePrintOrExportPdf = async () => {
-    if (!resultData) return;
+    if (!resultData || !printableContentRef.current) return;
 
     document.body.classList.add('print-active-page');
-    const mainContentArea = printableContentRef.current;
-    if (mainContentArea) {
-      mainContentArea.classList.add('printable-content-area');
-    }
-
 
     const explorationContent = resultData.detailedMbtiExploration ? await marked.parse(resultData.detailedMbtiExploration) : null;
     const strategiesContent = resultData.developmentStrategies ? await marked.parse(resultData.developmentStrategies) : null;
@@ -134,12 +129,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
             htmlToInject += `<h2 class="font-display text-2xl text-content mt-6 mb-3">Development Strategies</h2><div class="prose prose-sm sm:prose-base max-w-none">${strategiesContent}</div>`;
         }
         tempDetailsContainer.innerHTML = htmlToInject;
-        
-        if (mainContentArea) {
-            mainContentArea.appendChild(tempDetailsContainer);
-        } else {
-            document.body.appendChild(tempDetailsContainer); 
-        }
+        printableContentRef.current.appendChild(tempDetailsContainer);
     }
 
     const onAfterPrint = () => {
@@ -147,9 +137,6 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
             tempDetailsContainer.parentNode.removeChild(tempDetailsContainer);
         }
         document.body.classList.remove('print-active-page');
-        if (mainContentArea) {
-          mainContentArea.classList.remove('printable-content-area');
-        }
         window.removeEventListener('afterprint', onAfterPrint);
     };
     window.addEventListener('afterprint', onAfterPrint);
@@ -159,7 +146,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
 
 
   const ActionButton: React.FC<{ onClick?: () => void; text: string; icon?: React.ReactNode; className?: string; to?: string }> = ({ onClick, text, icon, className, to }) => {
-    const commonClasses = `flex items-center justify-center space-x-2 py-3 px-6 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 no-print`; // Added no-print
+    const commonClasses = `flex items-center justify-center space-x-2 py-3 px-6 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-105 no-print`;
     if (to) {
       return (
         <Link to={to} className={`${commonClasses} ${className || 'bg-secondary hover:bg-blue-700 text-white'}`}>
@@ -180,7 +167,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
   }
 
   return (
-    <div className="animate-fade-in space-y-10 pb-12" ref={printableContentRef}>
+    <div className="animate-fade-in space-y-10 pb-12 printable-content-area" ref={printableContentRef}>
       <header className="text-center py-12 bg-gradient-to-br from-primary/40 via-bground/70 to-bground rounded-xl shadow-2xl p-6 relative overflow-hidden no-print">
         <SparklesIcon className="w-16 h-16 text-accent mx-auto mb-4 animate-pulse" />
         <h1 className="text-4xl md:text-5xl font-display font-bold mb-3 text-shadow-accent-glow">Your Personality Revealed</h1>
@@ -192,7 +179,7 @@ const ResultsPage: React.FC<ResultsPageProps> = ({ resultData, setLatestResult }
       </header>
       
       {/* This section will be visible for print, mimicking the header */}
-      <div className="print-only text-center py-6">
+      <div className="print-only report-header text-center">
         <h1 className="text-3xl font-display font-bold mb-2">Personality Report: {resultData.mbtiType}</h1>
         <p className="text-xl font-semibold mb-1">{resultData.mbtiType} - {resultData.personalitySummary || mbtiDetails.summary}</p>
         {resultData.language && <p className="text-sm text-content-muted mt-1">(Results Language: {currentLanguageName})</p>}
